@@ -1,17 +1,21 @@
-// Test widget dasar — hanya memastikan app bisa dirender tanpa crash.
-// Pengujian logika bisnis ada di file test terpisah per modul.
-
+// Test widget dasar — memastikan antarmuka utama dapat dirender.
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:beasiswa_jamaah/app.dart';
 
 void main() {
-  testWidgets('App dapat dirender tanpa crash', (WidgetTester tester) async {
+  testWidgets('App dapat dirender dengan navigasi 5 tab', (WidgetTester tester) async {
     await tester.pumpWidget(const BeasiswaJamaahApp());
-    // Verifikasi navigasi bawah tampil dengan 5 tab
-    expect(find.text('Beranda'), findsOneWidget);
-    expect(find.text('Donatur'), findsOneWidget);
-    expect(find.text('Kas'), findsOneWidget);
-    expect(find.text('Anak'), findsOneWidget);
-    expect(find.text('Laporan'), findsOneWidget);
+    await tester.pumpAndSettle();
+
+    // Verifikasi navigasi bawah (NavigationBar) tampil
+    expect(find.byType(NavigationBar), findsOneWidget);
+
+    // Verifikasi 5 ikon navigasi ada
+    expect(find.byIcon(Icons.home_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.people_outline), findsOneWidget);
+    expect(find.byIcon(Icons.account_balance_wallet_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.school_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.description_outlined), findsOneWidget);
   });
 }

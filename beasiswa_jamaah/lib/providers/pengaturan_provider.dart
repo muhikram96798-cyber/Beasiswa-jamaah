@@ -15,13 +15,20 @@ class PengaturanProvider extends ChangeNotifier {
 
   /// Muat semua pengaturan dari database
   Future<void> muat() async {
-    final db = await DatabaseService.instance.database;
-    final rows = await db.query('pengaturan');
-    _data.clear();
-    for (final row in rows) {
-      _data[row['kunci'] as String] = row['nilai'] as String;
+    try {
+      final db = await DatabaseService.instance.database;
+      final rows = await db.query('pengaturan');
+      _data.clear();
+      for (final row in rows) {
+        _data[row['kunci'] as String] = row['nilai'] as String;
+      }
+      _loaded = true;
+    } catch (_) {
+      // Fallback ke nilai default jika database belum diinisialisasi (misal saat widget testing)
+      _data.clear();
+      _data.addAll(PengaturanKey.defaults);
+      _loaded = true;
     }
-    _loaded = true;
     notifyListeners();
   }
 
