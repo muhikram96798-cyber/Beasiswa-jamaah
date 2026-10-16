@@ -1,32 +1,87 @@
 // Layar: Detail Anak Penerima Beasiswa (Mode Pengurus)
-// Menampilkan nama lengkap, analisis skor seleksi, dan kalkulasi kebutuhan dana.
+// Menampilkan nama lengkap, analisis skor seleksi, kalkulasi kebutuhan dana,
+// progres pemenuhan kebutuhan dalam persen, dan riwayat penyaluran bantuan.
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/anak.dart';
+import '../../models/penyaluran.dart';
 import '../../providers/anak_provider.dart';
+import '../../providers/kas_provider.dart';
 import '../../providers/pengaturan_provider.dart';
+import '../../providers/penyaluran_provider.dart';
 import '../../utils/rupiah_formatter.dart';
 import '../../utils/skor_seleksi.dart';
 import '../../widgets/konfirmasi_dialog.dart';
+import '../penyaluran/penyaluran_form_screen.dart';
 import 'anak_form_screen.dart';
 
-class AnakDetailScreen extends StatelessWidget {
+class AnakDetailScreen extends StatefulWidget {
   final Anak anak;
 
   const AnakDetailScreen({super.key, required this.anak});
 
   @override
+  State<AnakDetailScreen> createState() => _AnakDetailScreenState();
+}
+
+class _AnakDetailScreenState extends State<AnakDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.anak.id != null) {
+        context.read<PenyaluranProvider>().muatPenyaluranAnak(widget.anak.id!);
+      }
+    });
+  }
+
+  IconData _iconPenyaluran(JenisPenyaluran jenis) {
+    switch (jenis) {
+      case JenisPenyaluran.seragam:
+        return Icons.checkroom;
+      case JenisPenyaluran.sepatu:
+        return Icons.hiking;
+      case JenisPenyaluran.tas:
+        return Icons.backpack;
+      case JenisPenyaluran.buku:
+        return Icons.menu_book;
+      case JenisPenyaluran.uangSaku:
+        return Icons.account_balance_wallet;
+      case JenisPenyaluran.lain:
+        return Icons.card_giftcard;
+    }
+  }
+
+  Color _warnaPenyaluran(JenisPenyaluran jenis) {
+    switch (jenis) {
+      case JenisPenyaluran.seragam:
+        return Colors.teal;
+      case JenisPenyaluran.sepatu:
+        return Colors.brown;
+      case JenisPenyaluran.tas:
+        return Colors.deepPurple;
+      case JenisPenyaluran.buku:
+        return Colors.indigo;
+      case JenisPenyaluran.uangSaku:
+        return Colors.green.shade800;
+      case JenisPenyaluran.lain:
+        return Colors.blueGrey;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final pengaturan = context.watch<PengaturanProvider>();
     final anakProvider = context.watch<AnakProvider>();
+    final penyaluranProvider = context.watch<PenyaluranProvider>();
 
     // Ambil data terbaru anak jika ada update
     final anakTerkini = anakProvider.daftarAnak.firstWhere(
-      (a) => a.id == anak.id,
-      orElse: () => anak,
+      (a) => a.id == widget.anak.id,
+      orElse: () => widget.anak,
     );
 
     final skor = hitungSkor(
@@ -64,6 +119,20 @@ class AnakDetailScreen extends StatelessWidget {
       pipSmp: pengaturan.pipSmp,
       pipSma: pengaturan.pipSma,
     );
+
+    final totalTersalurkan =
+        penyaluranProvider.getTotalPenyaluran(anakTerkini.id!);
+    final riwayatPenyaluran =
+        penyaluranProvider.getRiwayatAnak(anakTerkini.id!);
+
+    final double rasio = kebutuhanBersih > 0
+        ? (totalTersalurkan / kebutuhanBersih).clamp(0.0, 1.0)
+        : 1.0;
+    final double persentaseNyata = kebutuhanBersih > 0
+        ? (totalTersalurkan / kebutuhanBersih) * 100.0
+        : 100.0;
+    final int sisaKebutuhan =
+        (kebutuhanBersih - totalTersalurkan).clamp(0, kebutuhanBersih);
 
     final tglMasuk = DateTime.tryParse(anakTerkini.tanggalMasuk);
     final tglStr = tglMasuk != null
@@ -227,6 +296,334 @@ class AnakDetailScreen extends StatelessWidget {
                     if (anakTerkini.keterangan != null &&
                         anakTerkini.keterangan!.isNotEmpty)
                       _barisData('Catatan / Alamat', anakTerkini.keterangan!),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ─── Kartu Progres Pemenuhan Kebutuhan Dana ────────────────────
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: rasio >= 1.0 ? Colors.green : Colors.green.shade200,
+                  width: 1.5,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Progres Pemenuhan Dana',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: rasio >= 1.0
+                                ? Colors.green[800]
+                                : Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${persentaseNyata.toStringAsFixed(1)}%',
+                            style: TextStyle(
+                              color: rasio >= 1.0
+                                  ? Colors.white
+                                  : Colors.green[900],
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Progress Bar
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: rasio,
+                        minHeight: 14,
+                        backgroundColor: Colors.grey.shade200,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          rasio >= 1.0 ? Colors.green.shade800 : Colors.green,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Sudah Disalurkan:',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.black54),
+                            ),
+                            Text(
+                              formatRupiah(totalTersalurkan),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Text(
+                              'Target Kebutuhan:',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.black54),
+                            ),
+                            Text(
+                              formatRupiah(kebutuhanBersih),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    if (sisaKebutuhan > 0) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Sisa Kebutuhan Belum Tersalurkan:',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.black87),
+                            ),
+                            Text(
+                              formatRupiah(sisaKebutuhan),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+                    // Tombol Salurkan Bantuan
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        icon: const Icon(Icons.volunteer_activism_outlined),
+                        label: const Text('Salurkan Bantuan Baru'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () async {
+                          final nav = Navigator.of(context);
+                          final provider = context.read<PenyaluranProvider>();
+                          final hasil = await nav.push<bool>(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  PenyaluranFormScreen(anak: anakTerkini),
+                            ),
+                          );
+                          if (hasil == true && mounted) {
+                            await provider.muatPenyaluranAnak(anakTerkini.id!);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ─── Riwayat Penyaluran Bantuan ───────────────────────────────
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Riwayat Penyaluran Bantuan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '${riwayatPenyaluran.length} Transaksi',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 20),
+
+                    if (riwayatPenyaluran.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.inventory_2_outlined,
+                                  size: 40, color: Colors.grey[400]),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Belum ada bantuan yang disalurkan',
+                                style: TextStyle(
+                                    color: Colors.black54, fontSize: 14),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Gunakan tombol di atas untuk mencatat seragam, buku, sepatu, tas, atau uang saku.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: Colors.black38, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: riwayatPenyaluran.length,
+                        separatorBuilder: (_, _) =>
+                            const Divider(height: 1, indent: 56),
+                        itemBuilder: (ctx, index) {
+                          final p = riwayatPenyaluran[index];
+                          final tgl = DateTime.tryParse(p.tanggal);
+                          final tglDisplay = tgl != null
+                              ? DateFormat('d MMM yyyy', 'id_ID').format(tgl)
+                              : p.tanggal;
+
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              backgroundColor:
+                                  _warnaPenyaluran(p.jenis).withValues(alpha: 0.15),
+                              child: Icon(
+                                _iconPenyaluran(p.jenis),
+                                color: _warnaPenyaluran(p.jenis),
+                                size: 22,
+                              ),
+                            ),
+                            title: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  p.jenis.label,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15),
+                                ),
+                                Text(
+                                  formatRupiah(p.nominal),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: Colors.red[800],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 2),
+                                Text(
+                                  p.jenis == JenisPenyaluran.uangSaku
+                                      ? 'Penerima: ${p.penerima ?? '-'}'
+                                      : 'Toko/Penjahit: ${p.penerima ?? '-'}',
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                                if (p.keterangan.isNotEmpty)
+                                  Text(
+                                    p.keterangan,
+                                    style: const TextStyle(
+                                        fontSize: 12, color: Colors.black54),
+                                  ),
+                                Text(
+                                  tglDisplay,
+                                  style: const TextStyle(
+                                      fontSize: 11, color: Colors.black45),
+                                ),
+                              ],
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete_outline,
+                                  color: Colors.red, size: 20),
+                              tooltip: 'Batalkan & Kembalikan ke Kas',
+                              onPressed: () async {
+                                final provider = context.read<PenyaluranProvider>();
+                                final kas = context.read<KasProvider>();
+                                final messenger = ScaffoldMessenger.of(context);
+                                final setuju = await tampilkanKonfirmasi(
+                                  context: context,
+                                  judul: 'Batalkan Penyaluran?',
+                                  pesan:
+                                      'Penyaluran ${p.jenis.label} senilai ${formatRupiah(p.nominal)} akan dihapus dan nominalnya akan otomatis dikembalikan ke saldo kas.',
+                                  labelKonfirmasi: 'Hapus & Kembalikan Kas',
+                                  destruktif: true,
+                                );
+
+                                if (setuju && mounted) {
+                                  await provider.hapusPenyaluran(p.id!, anakTerkini.id!);
+                                  await kas.muatData();
+                                  await provider.muatPenyaluranAnak(anakTerkini.id!);
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          'Penyaluran dibatalkan dan saldo kas dikembalikan.'),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                          );
+                        },
+                      ),
                   ],
                 ),
               ),

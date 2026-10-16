@@ -65,6 +65,7 @@ class PengaturanProvider extends ChangeNotifier {
   int get iuranMin => getInt(PengaturanKey.iuranMin, defaultValue: 20000);
   int get iuranMax => getInt(PengaturanKey.iuranMax, defaultValue: 30000);
   int get pctCadangan => getInt(PengaturanKey.pctCadangan, defaultValue: 10);
+  int get persentaseCadangan => pctCadangan;
 
   int get bobotEkonomi => getInt(PengaturanKey.bobotEkonomi, defaultValue: 40);
   int get bobotYatim => getInt(PengaturanKey.bobotYatim, defaultValue: 30);

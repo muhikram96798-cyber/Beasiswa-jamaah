@@ -27,6 +27,7 @@ class KasProvider extends ChangeNotifier {
 
   List<TransaksiKas> get daftarTransaksi => _daftarTransaksi;
   RingkasanKas get ringkasan => _ringkasan;
+  RingkasanKas get ringkasanKas => _ringkasan;
   bool get loading => _loading;
   String? get pesanError => _pesanError;
 

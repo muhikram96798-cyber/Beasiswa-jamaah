@@ -22,6 +22,7 @@ class AnakProvider extends ChangeNotifier {
   String? get pesanError => _pesanError;
 
   List<Anak> get anakAktif => _daftarAnak.where((a) => a.aktif).toList();
+  List<Anak> get daftarAnakAktif => anakAktif;
   List<Anak> get anakSelesai => _daftarAnak.where((a) => !a.aktif).toList();
 
   int get totalAnak => _daftarAnak.length;
