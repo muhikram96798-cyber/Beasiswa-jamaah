@@ -10,6 +10,7 @@ enum TipeTransaksi { masuk, keluar }
 enum KategoriTransaksi {
   iuran,
   infak,
+  kasSosial,
   donasi,
   perlengkapan,
   uangSaku,
@@ -30,6 +31,8 @@ extension KategoriTransaksiX on KategoriTransaksi {
         return 'IURAN';
       case KategoriTransaksi.infak:
         return 'INFAK';
+      case KategoriTransaksi.kasSosial:
+        return 'KAS_SOSIAL';
       case KategoriTransaksi.donasi:
         return 'DONASI';
       case KategoriTransaksi.perlengkapan:
@@ -49,8 +52,10 @@ extension KategoriTransaksiX on KategoriTransaksi {
         return 'Iuran Donatur';
       case KategoriTransaksi.infak:
         return 'Infak';
+      case KategoriTransaksi.kasSosial:
+        return 'Kas Sosial';
       case KategoriTransaksi.donasi:
-        return 'Donasi';
+        return 'Donasi Lain';
       case KategoriTransaksi.perlengkapan:
         return 'Perlengkapan Anak';
       case KategoriTransaksi.uangSaku:
