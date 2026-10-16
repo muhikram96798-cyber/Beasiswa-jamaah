@@ -1,0 +1,20 @@
+# Flutter SDK lokal — jangan ikut di-commit (ukuran >1GB)
+tools/flutter/
+
+# Build output
+beasiswa_jamaah/build/
+
+# Dart/Flutter generated files
+beasiswa_jamaah/.dart_tool/
+beasiswa_jamaah/.flutter-plugins
+beasiswa_jamaah/.flutter-plugins-dependencies
+
+# Android local files
+beasiswa_jamaah/android/.gradle/
+beasiswa_jamaah/android/local.properties
+beasiswa_jamaah/android/key.properties
+
+# IDE
+.idea/
+.vscode/
+*.iml
