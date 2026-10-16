@@ -9,7 +9,7 @@ import '../models/pengaturan.dart';
 
 class DatabaseService {
   static const String _dbName = 'beasiswa_jamaah.db';
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 2;
 
   // Singleton
   DatabaseService._internal();
@@ -36,7 +36,7 @@ class DatabaseService {
     );
   }
 
-  // ─── Migrasi versi 1 ──────────────────────────────────────────────────────
+  // ─── Migrasi Database ─────────────────────────────────────────────────────
 
   Future<void> _onCreate(Database db, int version) async {
     await _createTablesV1(db);
@@ -44,10 +44,12 @@ class DatabaseService {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Placeholder untuk versi mendatang
-    if (oldVersion < 1) {
-      await _createTablesV1(db);
-      await _seedPengaturan(db);
+    if (oldVersion < 2) {
+      try {
+        await db.execute(
+          'ALTER TABLE anak ADD COLUMN buruh_tani INTEGER NOT NULL DEFAULT 0',
+        );
+      } catch (_) {}
     }
   }
 
@@ -113,6 +115,7 @@ class DatabaseService {
         jumlah_saudara INTEGER NOT NULL,
         kondisi_ekonomi TEXT NOT NULL,
         status_pip TEXT NOT NULL,
+        buruh_tani INTEGER NOT NULL DEFAULT 0,
         nama_wali TEXT,
         tanggal_masuk TEXT NOT NULL,
         aktif INTEGER NOT NULL DEFAULT 1,

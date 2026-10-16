@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'providers/anak_provider.dart';
 import 'providers/donatur_provider.dart';
 import 'providers/kas_provider.dart';
 import 'providers/pengaturan_provider.dart';
@@ -24,6 +25,7 @@ class BeasiswaJamaahApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PengaturanProvider()),
         ChangeNotifierProvider(create: (_) => DonaturProvider()),
         ChangeNotifierProvider(create: (_) => KasProvider()),
+        ChangeNotifierProvider(create: (_) => AnakProvider()),
       ],
       child: MaterialApp(
         title: 'Beasiswa Jamaah Tetap',

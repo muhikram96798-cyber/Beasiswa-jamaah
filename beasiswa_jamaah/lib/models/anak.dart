@@ -130,6 +130,7 @@ class Anak {
   final int jumlahSaudara;
   final KondisiEkonomi kondisiEkonomi;
   final StatusPip statusPip;
+  final bool buruhTani; // Apakah dari keluarga buruh tani
   final String? namaWali; // Wali kelas / orang tua penerima uang saku
   final String tanggalMasuk; // ISO-8601 YYYY-MM-DD
   final bool aktif;
@@ -146,6 +147,7 @@ class Anak {
     required this.jumlahSaudara,
     required this.kondisiEkonomi,
     required this.statusPip,
+    this.buruhTani = false,
     this.namaWali,
     required this.tanggalMasuk,
     this.aktif = true,
@@ -164,6 +166,7 @@ class Anak {
       'jumlah_saudara': jumlahSaudara,
       'kondisi_ekonomi': kondisiEkonomi.value,
       'status_pip': statusPip.value,
+      'buruh_tani': buruhTani ? 1 : 0,
       'nama_wali': namaWali,
       'tanggal_masuk': tanggalMasuk,
       'aktif': aktif ? 1 : 0,
@@ -183,6 +186,7 @@ class Anak {
       jumlahSaudara: map['jumlah_saudara'] as int,
       kondisiEkonomi: KondisiEkonomiX.fromString(map['kondisi_ekonomi'] as String),
       statusPip: StatusPipX.fromString(map['status_pip'] as String),
+      buruhTani: (map['buruh_tani'] as int? ?? 0) == 1,
       namaWali: map['nama_wali'] as String?,
       tanggalMasuk: map['tanggal_masuk'] as String,
       aktif: (map['aktif'] as int) == 1,
@@ -201,6 +205,7 @@ class Anak {
     int? jumlahSaudara,
     KondisiEkonomi? kondisiEkonomi,
     StatusPip? statusPip,
+    bool? buruhTani,
     String? namaWali,
     String? tanggalMasuk,
     bool? aktif,
@@ -217,6 +222,7 @@ class Anak {
       jumlahSaudara: jumlahSaudara ?? this.jumlahSaudara,
       kondisiEkonomi: kondisiEkonomi ?? this.kondisiEkonomi,
       statusPip: statusPip ?? this.statusPip,
+      buruhTani: buruhTani ?? this.buruhTani,
       namaWali: namaWali ?? this.namaWali,
       tanggalMasuk: tanggalMasuk ?? this.tanggalMasuk,
       aktif: aktif ?? this.aktif,

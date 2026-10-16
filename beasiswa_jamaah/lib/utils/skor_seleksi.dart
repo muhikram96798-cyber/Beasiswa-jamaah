@@ -96,3 +96,65 @@ String deskripsikomponen({
       'Jumlah saudara ($bobotSaudara poin) + '
       'Status KIP/PIP ($bobotKip poin)';
 }
+
+/// Menghitung kebutuhan dana per anak per tahun berdasarkan jenjang
+/// dan dikurangi estimasi bantuan PIP pemerintah bila anak sudah menerima PIP.
+int hitungKebutuhanDana({
+  required Jenjang jenjang,
+  required StatusPip statusPip,
+  required int biayaSd,
+  required int biayaSmp,
+  required int biayaSma,
+  required int pipSd,
+  required int pipSmp,
+  required int pipSma,
+}) {
+  int biayaStandar;
+  int estimasiPip;
+
+  switch (jenjang) {
+    case Jenjang.sd:
+      biayaStandar = biayaSd;
+      estimasiPip = pipSd;
+      break;
+    case Jenjang.smp:
+      biayaStandar = biayaSmp;
+      estimasiPip = pipSmp;
+      break;
+    case Jenjang.sma:
+      biayaStandar = biayaSma;
+      estimasiPip = pipSma;
+      break;
+  }
+
+  if (statusPip == StatusPip.sudahMenerima) {
+    final sisa = biayaStandar - estimasiPip;
+    return sisa > 0 ? sisa : 0;
+  }
+
+  return biayaStandar;
+}
+
+/// Ambil biaya standar per jenjang (sebelum dikurangi PIP)
+int getBiayaStandar(Jenjang jenjang, {required int sd, required int smp, required int sma}) {
+  switch (jenjang) {
+    case Jenjang.sd:
+      return sd;
+    case Jenjang.smp:
+      return smp;
+    case Jenjang.sma:
+      return sma;
+  }
+}
+
+/// Ambil estimasi PIP per jenjang
+int getEstimasiPip(Jenjang jenjang, {required int sd, required int smp, required int sma}) {
+  switch (jenjang) {
+    case Jenjang.sd:
+      return sd;
+    case Jenjang.smp:
+      return smp;
+    case Jenjang.sma:
+      return sma;
+  }
+}
