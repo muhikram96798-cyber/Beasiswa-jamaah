@@ -9,6 +9,7 @@
 
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/donatur.dart';
@@ -22,6 +23,7 @@ import '../../utils/rupiah_formatter.dart';
 import '../anak/anak_form_screen.dart';
 import '../donatur/catat_iuran_dialog.dart';
 import '../donatur/donatur_form_screen.dart';
+import '../panduan/panduan_screen.dart';
 import '../pengaturan/pengaturan_screen.dart';
 import '../penyaluran/penyaluran_form_screen.dart';
 
@@ -228,21 +230,34 @@ class _BerandaScreenState extends State<BerandaScreen> {
                               subtitle: Text(
                                 'Iuran: ${formatRupiah(d.nominalIuran)} / bulan',
                               ),
-                              trailing: FilledButton.tonal(
-                                onPressed: () async {
-                                  Navigator.of(ctx).pop();
-                                  final hasil = await showDialog<bool>(
-                                    context: context,
-                                    builder: (_) => CatatIuranDialog(
-                                      donatur: d,
-                                      bulanAwal: bulan,
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.chat_outlined,
+                                      color: Color(0xFF2E7D32),
                                     ),
-                                  );
-                                  if (hasil == true && mounted) {
-                                    await _segarkanSemuaData();
-                                  }
-                                },
-                                child: const Text('Catat Bayar'),
+                                    tooltip: 'Salin Pesan WA & QRIS',
+                                    onPressed: () => _salinPesanTagihan(d, bulan),
+                                  ),
+                                  FilledButton.tonal(
+                                    onPressed: () async {
+                                      Navigator.of(ctx).pop();
+                                      final hasil = await showDialog<bool>(
+                                        context: context,
+                                        builder: (_) => CatatIuranDialog(
+                                          donatur: d,
+                                          bulanAwal: bulan,
+                                        ),
+                                      );
+                                      if (hasil == true && mounted) {
+                                        await _segarkanSemuaData();
+                                      }
+                                    },
+                                    child: const Text('Catat Bayar'),
+                                  ),
+                                ],
                               ),
                             );
                           },
@@ -254,6 +269,39 @@ class _BerandaScreenState extends State<BerandaScreen> {
           },
         );
       },
+    );
+  }
+
+  void _salinPesanTagihan(Donatur d, int bulan) {
+    final p = context.read<PengaturanProvider>();
+    final namaBulan = DonaturService.getNamaBulan(bulan);
+    final nominalStr = formatRupiah(d.nominalIuran);
+
+    final pesan = '''
+Assalamu'alaikum Warahmatullahi Wabarakatuh.
+Yth. ${d.namaKeluarga},
+
+Semoga Bapak/Ibu sekeluarga senantiasa dalam lindungan dan rahmat Allah SWT.
+
+Kami dari Pengurus Beasiswa Jamaah Tetap (${p.namaMasjid}) bermaksud menginformasikan iuran program beasiswa yatim & dhuafa untuk bulan $namaBulan sebesar $nominalStr.
+
+Iuran dapat disalurkan secara tunai atau melalui transfer / scan QRIS:
+• Bank: ${p.namaBank}
+• No. Rekening: ${p.nomorRekening} (a.n. ${p.atasNamaRekening})
+• Petunjuk: ${p.catatanQris}
+
+Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga menjadi amal jariyah yang berlipat ganda. Aamiin ya Rabbal 'Alamin.
+''';
+
+    Clipboard.setData(ClipboardData(text: pesan.trim()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Pesan pengingat iuran & info QRIS ${d.namaKeluarga} telah disalin!',
+        ),
+        backgroundColor: const Color(0xFF2E7D32),
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 
@@ -359,6 +407,15 @@ class _BerandaScreenState extends State<BerandaScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'Panduan & SOP Program',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PanduanScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Pengaturan & Keamanan',
