@@ -8,14 +8,15 @@ void main() {
     await tester.pumpWidget(const BeasiswaJamaahApp());
     await tester.pumpAndSettle();
 
-    // Verifikasi navigasi bawah (NavigationBar) tampil
+    // Verifikasi navigasi bawah (NavigationBar) tampil dengan 5 destinasi tab
     expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(NavigationDestination), findsNWidgets(5));
 
-    // Verifikasi 5 ikon navigasi ada
-    expect(find.byIcon(Icons.home_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.people_outline), findsOneWidget);
-    expect(find.byIcon(Icons.account_balance_wallet_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.school_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.description_outlined), findsOneWidget);
+    // Verifikasi 5 label navigasi utama ada di antarmuka
+    expect(find.text('Beranda'), findsWidgets);
+    expect(find.text('Donatur'), findsWidgets);
+    expect(find.text('Kas'), findsWidgets);
+    expect(find.text('Anak'), findsWidgets);
+    expect(find.text('Laporan'), findsWidgets);
   });
 }

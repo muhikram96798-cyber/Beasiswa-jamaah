@@ -72,6 +72,12 @@ class PengaturanProvider extends ChangeNotifier {
   int get bobotSaudara => getInt(PengaturanKey.bobotSaudara, defaultValue: 15);
   int get bobotKip => getInt(PengaturanKey.bobotKip, defaultValue: 15);
 
+  int get putusSekolah => getInt(PengaturanKey.putusSekolah, defaultValue: 0);
+
+  Future<void> setPutusSekolah(int nilai) async {
+    await set(PengaturanKey.putusSekolah, '$nilai');
+  }
+
   int get tahunAjaranAktif =>
       getInt(PengaturanKey.tahunAjaranAktif, defaultValue: DateTime.now().year);
 

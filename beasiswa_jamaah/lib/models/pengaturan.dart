@@ -27,6 +27,9 @@ class PengaturanKey {
   static const String bobotSaudara = 'bobot_saudara';
   static const String bobotKip = 'bobot_kip';
 
+  // Indikator manual: jumlah anak putus sekolah (target: 0)
+  static const String putusSekolah = 'putus_sekolah';
+
   // Tahun ajaran yang sedang aktif ditampilkan
   static const String tahunAjaranAktif = 'tahun_ajaran_aktif';
 
@@ -48,6 +51,7 @@ class PengaturanKey {
         bobotYatim: '30',
         bobotSaudara: '15',
         bobotKip: '15',
+        putusSekolah: '0',
         tahunAjaranAktif: '${DateTime.now().year}',
         pinHash: '',
       };

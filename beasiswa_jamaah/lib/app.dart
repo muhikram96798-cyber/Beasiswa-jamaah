@@ -106,13 +106,13 @@ class MainNavigationShell extends StatefulWidget {
 class _MainNavigationShellState extends State<MainNavigationShell> {
   int _indexAktif = 0;
 
-  final List<Widget> _layar = const [
-    BerandaScreen(),
-    DonaturListScreen(),
-    KasScreen(),
-    AnakListScreen(),
-    LaporanScreen(),
-  ];
+  List<Widget> get _layar => [
+        BerandaScreen(onPindahTab: (i) => setState(() => _indexAktif = i)),
+        const DonaturListScreen(),
+        const KasScreen(),
+        const AnakListScreen(),
+        const LaporanScreen(),
+      ];
 
   @override
   void initState() {

@@ -29,6 +29,10 @@ class PenyaluranProvider with ChangeNotifier {
     return _petaTotalPerAnak[anakId] ?? 0;
   }
 
+  /// Total nominal seluruh penyaluran yang telah dilakukan ke seluruh anak
+  int get totalPenyaluranSemua =>
+      _petaTotalPerAnak.values.fold(0, (sum, val) => sum + val);
+
   /// Daftar riwayat penyaluran untuk anak tertentu
   List<Penyaluran> getRiwayatAnak(int anakId) {
     return _petaRiwayatAnak[anakId] ?? [];
