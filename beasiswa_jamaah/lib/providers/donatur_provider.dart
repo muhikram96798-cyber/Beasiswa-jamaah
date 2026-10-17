@@ -22,6 +22,7 @@ class DonaturProvider extends ChangeNotifier {
   String? _pesanError;
 
   List<Donatur> get daftarDonatur => _daftarDonatur;
+  Map<int, Map<int, Iuran>> get matriksIuran => _matriksIuran;
   int get tahunAktif => _tahunAktif;
   bool get loading => _loading;
   String? get pesanError => _pesanError;

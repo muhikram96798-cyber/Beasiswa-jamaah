@@ -49,6 +49,11 @@ class DonaturService {
     return daftarNamaBulan[bulan - 1];
   }
 
+  static String getSingkatanBulan(int bulan) {
+    if (bulan < 1 || bulan > 12) return 'B$bulan';
+    return singkatanBulan[bulan - 1];
+  }
+
   // ─── CRUD Donatur ────────────────────────────────────────────────────────
 
   Future<int> tambahDonatur(Donatur donatur) async {
