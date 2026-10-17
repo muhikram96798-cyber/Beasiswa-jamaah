@@ -12,6 +12,7 @@ import '../../providers/penyaluran_provider.dart';
 import '../../utils/rupiah_formatter.dart';
 import '../../utils/skor_seleksi.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/pin_dialog.dart';
 import '../penyaluran/penyaluran_form_screen.dart';
 import 'anak_detail_screen.dart';
 import 'anak_form_screen.dart';
@@ -208,6 +209,14 @@ class _AnakListScreenState extends State<AnakListScreen> {
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(12),
                                 onTap: () async {
+                                  final lolos = await PinAuthDialog.verifikasi(
+                                    context,
+                                    judul: 'Verifikasi Mode Pengurus',
+                                    pesan:
+                                        'Masukkan 6 digit PIN untuk membuka rincian identitas lengkap.',
+                                  );
+                                  if (!lolos || !context.mounted) return;
+
                                   await Navigator.of(context).push(
                                     MaterialPageRoute(
                                       builder: (_) =>
@@ -393,7 +402,15 @@ class _AnakListScreenState extends State<AnakListScreen> {
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.person_add_alt_1),
         label: const Text('Tambah Anak'),
-        onPressed: () {
+        onPressed: () async {
+          final lolos = await PinAuthDialog.verifikasi(
+            context,
+            judul: 'Verifikasi Tambah Penerima',
+            pesan:
+                'Masukkan 6 digit PIN pengurus untuk mendaftarkan anak penerima baru.',
+          );
+          if (!lolos || !context.mounted) return;
+
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const AnakFormScreen()),
           );

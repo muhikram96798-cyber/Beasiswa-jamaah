@@ -6,6 +6,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../models/pengaturan.dart';
 import '../services/database_service.dart';
+import '../utils/pin_helper.dart';
 
 class PengaturanProvider extends ChangeNotifier {
   final Map<String, String> _data = {};
@@ -83,4 +84,40 @@ class PengaturanProvider extends ChangeNotifier {
 
   String get pinHash => get(PengaturanKey.pinHash);
   bool get sudahAdaPin => pinHash.isNotEmpty;
+
+  // ─── Manajemen PIN ────────────────────────────────────────────────────────
+
+  bool verifikasiPin(String pin) {
+    if (!sudahAdaPin) return true;
+    return PinHelper.verifikasiPin(pin, pinHash);
+  }
+
+  Future<void> simpanPin(String pin) async {
+    final hash = PinHelper.hashPin(pin);
+    await set(PengaturanKey.pinHash, hash);
+  }
+
+  Future<void> hapusPin() async {
+    await set(PengaturanKey.pinHash, '');
+  }
+
+  // ─── Informasi Rekening & QRIS Masjid ─────────────────────────────────────
+
+  String get namaMasjid =>
+      get(PengaturanKey.namaMasjid, defaultValue: 'Masjid Jami Al-Ikhlas');
+  String get namaBank =>
+      get(PengaturanKey.namaBank, defaultValue: 'Bank Syariah Indonesia (BSI)');
+  String get nomorRekening =>
+      get(PengaturanKey.nomorRekening, defaultValue: '7123456789');
+  String get atasNamaRekening =>
+      get(PengaturanKey.atasNamaRekening, defaultValue: 'Kas Beasiswa Jamaah');
+  String get catatanQris => get(
+        PengaturanKey.catatanQris,
+        defaultValue:
+            'Scan QRIS BSI Masjid atau transfer via Rekening Kas Beasiswa Jamaah',
+      );
+
+  Future<void> setTahunAjaranAktif(int tahun) async {
+    await set(PengaturanKey.tahunAjaranAktif, '$tahun');
+  }
 }

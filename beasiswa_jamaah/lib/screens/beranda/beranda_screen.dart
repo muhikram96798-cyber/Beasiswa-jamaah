@@ -22,6 +22,7 @@ import '../../utils/rupiah_formatter.dart';
 import '../anak/anak_form_screen.dart';
 import '../donatur/catat_iuran_dialog.dart';
 import '../donatur/donatur_form_screen.dart';
+import '../pengaturan/pengaturan_screen.dart';
 import '../penyaluran/penyaluran_form_screen.dart';
 
 class BerandaScreen extends StatefulWidget {
@@ -358,6 +359,18 @@ class _BerandaScreenState extends State<BerandaScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Pengaturan & Keamanan',
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PengaturanScreen()),
+              );
+              if (context.mounted) {
+                _segarkanSemuaData();
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Segarkan data',

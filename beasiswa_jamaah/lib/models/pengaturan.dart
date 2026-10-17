@@ -36,6 +36,13 @@ class PengaturanKey {
   // Hash PIN pengurus (kosong = belum diset, mode lihat saja)
   static const String pinHash = 'pin_hash';
 
+  // Rekening Donasi & Instruksi QRIS Masjid (Tahap 8)
+  static const String namaMasjid = 'nama_masjid';
+  static const String namaBank = 'nama_bank';
+  static const String nomorRekening = 'nomor_rekening';
+  static const String atasNamaRekening = 'atas_nama_rekening';
+  static const String catatanQris = 'catatan_qris';
+
   /// Nilai default untuk seeding database pertama kali
   static Map<String, String> get defaults => {
         biayaSd: '2310000',
@@ -54,6 +61,11 @@ class PengaturanKey {
         putusSekolah: '0',
         tahunAjaranAktif: '${DateTime.now().year}',
         pinHash: '',
+        namaMasjid: 'Masjid Jami Al-Ikhlas',
+        namaBank: 'Bank Syariah Indonesia (BSI)',
+        nomorRekening: '7123456789',
+        atasNamaRekening: 'Kas Beasiswa Jamaah',
+        catatanQris: 'Scan QRIS BSI Masjid atau transfer via Rekening Kas Beasiswa Jamaah',
       };
 }
 
