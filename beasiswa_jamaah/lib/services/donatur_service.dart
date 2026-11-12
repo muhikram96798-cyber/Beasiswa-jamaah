@@ -78,30 +78,36 @@ class DonaturService {
   Future<int> hapusDonatur(int id) async {
     final db = await _dbService.database;
     return await db.transaction((txn) async {
-      // Ambil semua iuran donatur ini untuk menghapus transaksi kas terkait
+      // Ambil semua iuran donatur ini untuk mendapatkan transaksi kas ID terkait
       final listIuran = await txn.query(
         'iuran',
         where: 'donatur_id = ?',
         whereArgs: [id],
       );
 
-      for (final item in listIuran) {
-        final kasId = item['transaksi_kas_id'] as int?;
-        if (kasId != null) {
-          await txn.delete(
-            'transaksi_kas',
-            where: 'id = ?',
-            whereArgs: [kasId],
-          );
-        }
+      final kasIds = listIuran
+          .map((item) => item['transaksi_kas_id'] as int?)
+          .whereType<int>()
+          .toList();
+
+      // 1. Lepaskan relasi sumber_id di transaksi_kas agar pembukuan kas tetap utuh & aman
+      for (final kasId in kasIds) {
+        await txn.update(
+          'transaksi_kas',
+          {'sumber_id': null},
+          where: 'id = ?',
+          whereArgs: [kasId],
+        );
       }
 
+      // 2. Hapus iuran donatur agar relasi foreign key terlepas
       await txn.delete(
         'iuran',
         where: 'donatur_id = ?',
         whereArgs: [id],
       );
 
+      // 3. Terakhir hapus record donatur (kas tetap aman, saldo tidak berkurang)
       return await txn.delete(
         'donatur',
         where: 'id = ?',
@@ -229,6 +235,15 @@ class DonaturService {
       if (iuranMaps.isEmpty) return;
 
       final kasId = iuranMaps.first['transaksi_kas_id'] as int?;
+
+      // 1. Hapus iuran terlebih dahulu agar foreign key constraint terlepas
+      await txn.delete(
+        'iuran',
+        where: 'id = ?',
+        whereArgs: [iuranId],
+      );
+
+      // 2. Hapus transaksi kas terkait
       if (kasId != null) {
         await txn.delete(
           'transaksi_kas',
@@ -236,12 +251,6 @@ class DonaturService {
           whereArgs: [kasId],
         );
       }
-
-      await txn.delete(
-        'iuran',
-        where: 'id = ?',
-        whereArgs: [iuranId],
-      );
     });
   }
 

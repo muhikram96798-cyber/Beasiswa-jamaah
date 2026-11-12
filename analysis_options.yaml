@@ -1,0 +1,5 @@
+analyzer:
+  exclude:
+    - tools/**
+    - beasiswa_jamaah/build/**
+    - beasiswa_jamaah/.dart_tool/**

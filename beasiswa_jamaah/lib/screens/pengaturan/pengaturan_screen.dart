@@ -33,7 +33,8 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
   final _pipSmpCtrl = TextEditingController();
   final _pipSmaCtrl = TextEditingController();
 
-  // Controllers untuk iuran & cadangan
+  // Controllers untuk iuran, tahun ajaran & cadangan
+  final _tahunAktifCtrl = TextEditingController();
   final _iuranMinCtrl = TextEditingController();
   final _iuranMaxCtrl = TextEditingController();
   final _cadanganCtrl = TextEditingController();
@@ -51,12 +52,15 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
   final _atasNamaCtrl = TextEditingController();
   final _catatanQrisCtrl = TextEditingController();
 
+  bool _sudahInisialisasi = false;
+
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_sudahInisialisasi) {
       _isiNilaiForm();
-    });
+      _sudahInisialisasi = true;
+    }
   }
 
   void _isiNilaiForm() {
@@ -68,6 +72,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
     _pipSmpCtrl.text = '${p.pipSmp}';
     _pipSmaCtrl.text = '${p.pipSma}';
 
+    _tahunAktifCtrl.text = '${p.tahunAjaranAktif}';
     _iuranMinCtrl.text = '${p.iuranMin}';
     _iuranMaxCtrl.text = '${p.iuranMax}';
     _cadanganCtrl.text = '${p.pctCadangan}';
@@ -92,6 +97,7 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
     _pipSdCtrl.dispose();
     _pipSmpCtrl.dispose();
     _pipSmaCtrl.dispose();
+    _tahunAktifCtrl.dispose();
     _iuranMinCtrl.dispose();
     _iuranMaxCtrl.dispose();
     _cadanganCtrl.dispose();
@@ -108,11 +114,11 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
   }
 
   Future<void> _simpanSemuaPengaturan() async {
-    // Validasi bobot total harus 100%
-    final bEko = int.tryParse(_bobotEkonomiCtrl.text) ?? 0;
-    final bYat = int.tryParse(_bobotYatimCtrl.text) ?? 0;
-    final bSau = int.tryParse(_bobotSaudaraCtrl.text) ?? 0;
-    final bKip = int.tryParse(_bobotKipCtrl.text) ?? 0;
+    // 1. Validasi bobot total harus 100%
+    final bEko = int.tryParse(_bobotEkonomiCtrl.text.trim()) ?? 0;
+    final bYat = int.tryParse(_bobotYatimCtrl.text.trim()) ?? 0;
+    final bSau = int.tryParse(_bobotSaudaraCtrl.text.trim()) ?? 0;
+    final bKip = int.tryParse(_bobotKipCtrl.text.trim()) ?? 0;
     final totalBobot = bEko + bYat + bSau + bKip;
 
     if (totalBobot != 100) {
@@ -127,20 +133,95 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
       return;
     }
 
+    // 2. Validasi tahun ajaran
+    final thn = int.tryParse(_tahunAktifCtrl.text.trim()) ?? 0;
+    if (thn < 2000 || thn > 2100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Tahun ajaran harus berupa 4 digit angka yang valid (contoh: 2026).',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 3. Validasi rentang iuran
+    final iMin = int.tryParse(_iuranMinCtrl.text.trim()) ?? 0;
+    final iMax = int.tryParse(_iuranMaxCtrl.text.trim()) ?? 0;
+    if (iMin <= 0 || iMax <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Nominal iuran minimal dan maksimal harus lebih dari Rp0.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (iMin > iMax) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Nominal iuran minimal tidak boleh lebih besar dari iuran maksimal.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 4. Validasi persentase pos cadangan
+    final pctCad = int.tryParse(_cadanganCtrl.text.trim()) ?? -1;
+    if (pctCad < 0 || pctCad > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Persentase pos cadangan harus antara 0% hingga 100%.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 5. Validasi biaya pendidikan & PIP
+    final bSd = int.tryParse(_biayaSdCtrl.text.trim()) ?? 0;
+    final bSmp = int.tryParse(_biayaSmpCtrl.text.trim()) ?? 0;
+    final bSma = int.tryParse(_biayaSmaCtrl.text.trim()) ?? 0;
+    if (bSd <= 0 || bSmp <= 0 || bSma <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Estimasi biaya pendidikan per jenjang harus lebih dari Rp0.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final pSd = int.tryParse(_pipSdCtrl.text.trim()) ?? 0;
+    final pSmp = int.tryParse(_pipSmpCtrl.text.trim()) ?? 0;
+    final pSma = int.tryParse(_pipSmaCtrl.text.trim()) ?? 0;
+
     final p = context.read<PengaturanProvider>();
     setState(() => _memuat = true);
 
     try {
-      await p.set(PengaturanKey.biayaSd, _biayaSdCtrl.text);
-      await p.set(PengaturanKey.biayaSmp, _biayaSmpCtrl.text);
-      await p.set(PengaturanKey.biayaSma, _biayaSmaCtrl.text);
-      await p.set(PengaturanKey.pipSd, _pipSdCtrl.text);
-      await p.set(PengaturanKey.pipSmp, _pipSmpCtrl.text);
-      await p.set(PengaturanKey.pipSma, _pipSmaCtrl.text);
+      await p.setTahunAjaranAktif(thn);
+      await p.set(PengaturanKey.biayaSd, '$bSd');
+      await p.set(PengaturanKey.biayaSmp, '$bSmp');
+      await p.set(PengaturanKey.biayaSma, '$bSma');
+      await p.set(PengaturanKey.pipSd, '$pSd');
+      await p.set(PengaturanKey.pipSmp, '$pSmp');
+      await p.set(PengaturanKey.pipSma, '$pSma');
 
-      await p.set(PengaturanKey.iuranMin, _iuranMinCtrl.text);
-      await p.set(PengaturanKey.iuranMax, _iuranMaxCtrl.text);
-      await p.set(PengaturanKey.pctCadangan, _cadanganCtrl.text);
+      await p.set(PengaturanKey.iuranMin, '$iMin');
+      await p.set(PengaturanKey.iuranMax, '$iMax');
+      await p.set(PengaturanKey.pctCadangan, '$pctCad');
 
       await p.set(PengaturanKey.bobotEkonomi, '$bEko');
       await p.set(PengaturanKey.bobotYatim, '$bYat');
@@ -153,14 +234,19 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
       await p.set(PengaturanKey.atasNamaRekening, _atasNamaCtrl.text.trim());
       await p.set(PengaturanKey.catatanQris, _catatanQrisCtrl.text.trim());
 
-      // Segarkan kas dan anak dengan parameter baru
+      // Segarkan semua provider dengan parameter konfigurasi baru
       if (mounted) {
         final kasProv = context.read<KasProvider>();
         final anakProv = context.read<AnakProvider>();
+        final donaturProv = context.read<DonaturProvider>();
+        final penyaluranProv = context.read<PenyaluranProvider>();
         final scaffoldMessenger = ScaffoldMessenger.of(context);
 
         await kasProv.muatData(persentaseCadangan: p.persentaseCadangan);
         await anakProv.muatData();
+        await donaturProv.muatData(tahun: p.tahunAjaranAktif);
+        await penyaluranProv.muatData();
+
         if (mounted) {
           scaffoldMessenger.showSnackBar(
             const SnackBar(
@@ -220,6 +306,13 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
   }
 
   Future<void> _eksporCadangan() async {
+    final lolosPin = await PinAuthDialog.verifikasi(
+      context,
+      judul: 'Verifikasi PIN Pengurus',
+      pesan: 'Masukkan PIN pengurus untuk mengekspor database cadangan.',
+    );
+    if (!lolosPin || !mounted) return;
+
     setState(() => _memuat = true);
     try {
       await BackupService.eksporCadangan();
@@ -246,6 +339,14 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
   }
 
   Future<void> _pulihkanCadangan() async {
+    final lolosPin = await PinAuthDialog.verifikasi(
+      context,
+      judul: 'Verifikasi PIN Pengurus',
+      pesan:
+          'Masukkan PIN pengurus untuk memulihkan database dari file cadangan.',
+    );
+    if (!lolosPin || !mounted) return;
+
     final konfirmasi = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -380,7 +481,9 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                             style: TextStyle(fontSize: 13, color: Colors.black54),
                           ),
                           const SizedBox(height: 12),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [
                               FilledButton.tonalIcon(
                                 onPressed: _bukaDialogPin,
@@ -389,13 +492,11 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                                   p.sudahAdaPin ? 'Ubah PIN' : 'Buat PIN 6 Digit',
                                 ),
                               ),
-                              if (p.sudahAdaPin) ...[
-                                const SizedBox(width: 8),
+                              if (p.sudahAdaPin)
                                 OutlinedButton(
                                   onPressed: _hapusPin,
                                   child: const Text('Nonaktifkan PIN'),
                                 ),
-                              ],
                             ],
                           ),
                         ],
@@ -533,16 +634,32 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // ─── 5. IURAN DONATUR & CADANGAN KAS ─────────────────────────
+                  // ─── 5. PERIODE TAHUN AJARAN, IURAN & CADANGAN KAS ───────────
                   _buildSectionHeader(
                     icon: Icons.payments_outlined,
-                    title: 'Rentang Iuran Donatur & Pos Cadangan 10%',
+                    title: 'Periode Program, Rentang Iuran & Cadangan Kas',
                   ),
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
+                          TextFormField(
+                            controller: _tahunAktifCtrl,
+                            keyboardType: TextInputType.number,
+                            maxLength: 4,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Tahun Ajaran Aktif Program',
+                              helperText:
+                                  'Tahun default untuk matriks iuran, donatur, dan laporan',
+                              counterText: '',
+                              prefixIcon: Icon(Icons.calendar_today_outlined),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           Row(
                             children: [
                               Expanded(
@@ -688,17 +805,19 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(Icons.cloud_upload_outlined,
+                              const Icon(Icons.cloud_upload_outlined,
                                   color: Color(0xFF2E7D32)),
-                              SizedBox(width: 8),
-                              Text(
-                                'Perlindungan & Keamanan Data Lokal',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                  color: Color(0xFF1B5E20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Perlindungan & Keamanan Data Lokal',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: Color(0xFF1B5E20),
+                                  ),
                                 ),
                               ),
                             ],
@@ -717,7 +836,10 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                                 child: FilledButton.icon(
                                   onPressed: _eksporCadangan,
                                   icon: const Icon(Icons.share, size: 18),
-                                  label: const Text('Cadangkan (.db)'),
+                                  label: const FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text('Cadangkan (.db)'),
+                                  ),
                                   style: FilledButton.styleFrom(
                                     backgroundColor: const Color(0xFF2E7D32),
                                   ),
@@ -728,13 +850,67 @@ class _PengaturanScreenState extends State<PengaturanScreen> {
                                 child: OutlinedButton.icon(
                                   onPressed: _pulihkanCadangan,
                                   icon: const Icon(Icons.restore, size: 18),
-                                  label: const Text('Pulihkan (.db)'),
+                                  label: const FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text('Pulihkan (.db)'),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ],
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Beasiswa Jamaah Tetap',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15.5,
+                            color: Color(0xFF166534),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Versi 1.0.0 • SQLite Offline-First',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Aplikasi Pengelolaan Beasiswa Pendidikan Anak Yatim & Dhuafa\nBerbasis Jamaah Tempat Ibadah',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11.5, color: Colors.black45, height: 1.3),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 40),

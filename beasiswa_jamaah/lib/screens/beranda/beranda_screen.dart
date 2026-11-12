@@ -9,7 +9,6 @@
 
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/donatur.dart';
@@ -20,12 +19,14 @@ import '../../providers/pengaturan_provider.dart';
 import '../../providers/penyaluran_provider.dart';
 import '../../services/donatur_service.dart';
 import '../../utils/rupiah_formatter.dart';
+import '../../utils/whatsapp_helper.dart';
 import '../anak/anak_form_screen.dart';
 import '../donatur/catat_iuran_dialog.dart';
 import '../donatur/donatur_form_screen.dart';
 import '../panduan/panduan_screen.dart';
 import '../pengaturan/pengaturan_screen.dart';
 import '../penyaluran/penyaluran_form_screen.dart';
+import '../../widgets/pin_dialog.dart';
 
 class BerandaScreen extends StatefulWidget {
   final void Function(int)? onPindahTab;
@@ -227,8 +228,33 @@ class _BerandaScreenState extends State<BerandaScreen> {
                                 d.namaKeluarga,
                                 style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
-                              subtitle: Text(
-                                'Iuran: ${formatRupiah(d.nominalIuran)} / bulan',
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Iuran: ${formatRupiah(d.nominalIuran)} / bulan',
+                                  ),
+                                  if (d.nomorTelepon != null &&
+                                      d.nomorTelepon!.trim().isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.phone_outlined,
+                                            size: 12,
+                                            color: Colors.grey[700]),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          d.nomorTelepon!,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[800],
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -238,18 +264,20 @@ class _BerandaScreenState extends State<BerandaScreen> {
                                       Icons.chat_outlined,
                                       color: Color(0xFF2E7D32),
                                     ),
-                                    tooltip: 'Salin Pesan WA & QRIS',
+                                    tooltip: 'Kirim Pengingat WA',
                                     onPressed: () => _salinPesanTagihan(d, bulan),
                                   ),
                                   FilledButton.tonal(
                                     onPressed: () async {
                                       Navigator.of(ctx).pop();
-                                      final hasil = await showDialog<bool>(
-                                        context: context,
-                                        builder: (_) => CatatIuranDialog(
-                                          donatur: d,
-                                          bulanAwal: bulan,
-                                        ),
+                                      final tahunAktif = context
+                                          .read<PengaturanProvider>()
+                                          .tahunAjaranAktif;
+                                      final hasil = await CatatIuranDialog.show(
+                                        context,
+                                        donatur: d,
+                                        bulanAwal: bulan,
+                                        tahunAwal: tahunAktif,
                                       );
                                       if (hasil == true && mounted) {
                                         await _segarkanSemuaData();
@@ -274,34 +302,11 @@ class _BerandaScreenState extends State<BerandaScreen> {
 
   void _salinPesanTagihan(Donatur d, int bulan) {
     final p = context.read<PengaturanProvider>();
-    final namaBulan = DonaturService.getNamaBulan(bulan);
-    final nominalStr = formatRupiah(d.nominalIuran);
-
-    final pesan = '''
-Assalamu'alaikum Warahmatullahi Wabarakatuh.
-Yth. ${d.namaKeluarga},
-
-Semoga Bapak/Ibu sekeluarga senantiasa dalam lindungan dan rahmat Allah SWT.
-
-Kami dari Pengurus Beasiswa Jamaah Tetap (${p.namaMasjid}) bermaksud menginformasikan iuran program beasiswa yatim & dhuafa untuk bulan $namaBulan sebesar $nominalStr.
-
-Iuran dapat disalurkan secara tunai atau melalui transfer / scan QRIS:
-• Bank: ${p.namaBank}
-• No. Rekening: ${p.nomorRekening} (a.n. ${p.atasNamaRekening})
-• Petunjuk: ${p.catatanQris}
-
-Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga menjadi amal jariyah yang berlipat ganda. Aamiin ya Rabbal 'Alamin.
-''';
-
-    Clipboard.setData(ClipboardData(text: pesan.trim()));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Pesan pengingat iuran & info QRIS ${d.namaKeluarga} telah disalin!',
-        ),
-        backgroundColor: const Color(0xFF2E7D32),
-        duration: const Duration(seconds: 3),
-      ),
+    WhatsAppHelper.kirimPengingatWa(
+      context: context,
+      donatur: d,
+      bulan: bulan,
+      pengaturan: p,
     );
   }
 
@@ -336,9 +341,15 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
                 trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                 onTap: () async {
                   Navigator.of(ctx).pop();
-                  final hasil = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => CatatIuranDialog(donatur: d),
+                  final tahunAktif = context
+                      .read<PengaturanProvider>()
+                      .tahunAjaranAktif;
+                  final bulanSekarang = DateTime.now().month;
+                  final hasil = await CatatIuranDialog.show(
+                    context,
+                    donatur: d,
+                    bulanAwal: bulanSekarang,
+                    tahunAwal: tahunAktif,
                   );
                   if (hasil == true && mounted) {
                     await _segarkanSemuaData();
@@ -393,16 +404,55 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            const Text(
-              'Beasiswa Jamaah Tetap',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Container(
+              width: 38,
+              height: 38,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 4,
+                    offset: Offset(0, 1),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset(
+                'assets/images/logo.png',
+                fit: BoxFit.cover,
+              ),
             ),
-            Text(
-              'Tahun Ajaran $tahunAktif • Jamaah Tempat Ibadah',
-              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Beasiswa Jamaah',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  Text(
+                    'Tahun Ajaran $tahunAktif',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFFDCFCE7),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -420,6 +470,14 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Pengaturan & Keamanan',
             onPressed: () async {
+              final lolos = await PinAuthDialog.verifikasi(
+                context,
+                judul: 'Verifikasi Pengaturan',
+                pesan:
+                    'Masukkan 6 digit PIN pengurus untuk membuka menu pengaturan.',
+              );
+              if (!lolos || !context.mounted) return;
+
               await Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const PengaturanScreen()),
               );
@@ -499,162 +557,239 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
     required dynamic ringkasanKas,
     required int tahun,
   }) {
-    return Container(
+    return Card(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.green.shade800,
-            Colors.green.shade900,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.green.shade900.withValues(alpha: 0.25),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+      elevation: 4,
+      shadowColor: const Color(0xFF14532D).withValues(alpha: 0.35),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: InkWell(
+        onTap: () => widget.onPindahTab?.call(2),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF0F5132), // Deep Islamic Emerald
+                Color(0xFF166534), // Forest Green
+                Color(0xFF064E3B), // Rich Deep Pine
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Baris Header Kartu
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.account_balance_wallet_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'KAS BERSAMA JAMAAH',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Color(0xFFDCFCE7),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12.5,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.account_balance_wallet,
-                        color: Colors.white, size: 20),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    'KAS BERSAMA JAMAAH',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      letterSpacing: 0.8,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.calendar_today, size: 11, color: Colors.white),
+                        const SizedBox(width: 5),
+                        Text(
+                          'Tahun $tahun',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 16),
+
+              // Saldo Siap Pakai
+              const Text(
+                'Saldo Siap Pakai (Bisa Disalurkan)',
+                style: TextStyle(
+                  color: Color(0xFFD1FAE5),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
                 ),
+              ),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
                 child: Text(
-                  'Tahun $tahun',
+                  formatRupiah(ringkasanKas.saldoBisaDipakai),
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
+              const SizedBox(height: 16),
 
-          const Text(
-            'Saldo Siap Pakai (Bisa Disalurkan):',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            formatRupiah(ringkasanKas.saldoBisaDipakai),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Pos Dana Cadangan 10% & Total Kas
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+              // Pos Dana Cadangan 10% & Total Kas (2 Kotak Berdampingan Rapi)
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.amber.shade300.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.shield_outlined,
-                              size: 14, color: Colors.amber.shade300),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Cadangan 10% (Tersedia):',
-                            style: TextStyle(
-                              color: Colors.amber.shade200,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.shield_rounded,
+                                size: 13,
+                                color: Colors.amber.shade300,
+                              ),
+                              const SizedBox(width: 5),
+                              Expanded(
+                                child: Text(
+                                  'Cadangan ${ringkasanKas.persentaseCadangan}%',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.amber.shade200,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              formatRupiah(ringkasanKas.danaCadanganTersedia),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        formatRupiah(ringkasanKas.danaCadanganTersedia),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          width: 1,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                Container(
-                  height: 32,
-                  width: 1,
-                  color: Colors.white24,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Total Keseluruhan Kas:',
-                        style: TextStyle(color: Colors.white70, fontSize: 11),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.account_balance_rounded,
+                                size: 13,
+                                color: Color(0xFFDCFCE7),
+                              ),
+                              SizedBox(width: 5),
+                              Expanded(
+                                child: Text(
+                                  'Total Kas Utuh',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Color(0xFFDCFCE7),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              formatRupiah(ringkasanKas.totalSaldo),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        formatRupiah(ringkasanKas.totalSaldo),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -670,66 +805,79 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
     final namaBulan = DonaturService.getNamaBulan(bulan);
     final bool adaTunggakan = belumBayar.isNotEmpty;
 
-    return Container(
+    return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: adaTunggakan ? Colors.amber.shade50 : Colors.green.shade50,
+      elevation: 0,
+      color: adaTunggakan ? Colors.amber.shade50 : Colors.green.shade50,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
+        side: BorderSide(
           color: adaTunggakan ? Colors.amber.shade400 : Colors.green.shade300,
           width: 1.2,
         ),
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor:
-                adaTunggakan ? Colors.amber.shade100 : Colors.green.shade100,
-            child: Icon(
-              adaTunggakan ? Icons.priority_high : Icons.check_circle_outline,
-              color:
-                  adaTunggakan ? Colors.orange.shade900 : Colors.green.shade800,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  adaTunggakan
-                      ? '${belumBayar.length} Donatur Belum Bayar ($namaBulan)'
-                      : 'Iuran $namaBulan Lunas Sempurna',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: adaTunggakan
-                        ? Colors.orange.shade900
-                        : Colors.green.shade900,
-                  ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          if (adaTunggakan) {
+            _tampilkanDaftarBelumBayar(belumBayar, bulan);
+          } else {
+            widget.onPindahTab?.call(1);
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor:
+                    adaTunggakan ? Colors.amber.shade100 : Colors.green.shade100,
+                child: Icon(
+                  adaTunggakan ? Icons.priority_high : Icons.check_circle_outline,
+                  color:
+                      adaTunggakan ? Colors.orange.shade900 : Colors.green.shade800,
+                  size: 24,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  adaTunggakan
-                      ? 'Dari $totalAktif donatur aktif. Tekan untuk melihat daftar & tagih.'
-                      : 'Seluruh $totalAktif donatur aktif telah menyalurkan iuran tepat waktu.',
-                  style: const TextStyle(fontSize: 12, color: Colors.black87),
-                ),
-              ],
-            ),
-          ),
-          if (adaTunggakan)
-            FilledButton.tonal(
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                visualDensity: VisualDensity.compact,
               ),
-              onPressed: () => _tampilkanDaftarBelumBayar(belumBayar, bulan),
-              child: const Text('Lihat'),
-            ),
-        ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      adaTunggakan
+                          ? '${belumBayar.length} Donatur Belum Bayar ($namaBulan)'
+                          : 'Iuran $namaBulan Lunas Sempurna',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: adaTunggakan
+                            ? Colors.orange.shade900
+                            : Colors.green.shade900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      adaTunggakan
+                          ? 'Dari $totalAktif donatur aktif. Tekan untuk melihat daftar & kirim pengingat WA.'
+                          : 'Seluruh $totalAktif donatur aktif telah menyalurkan iuran tepat waktu.',
+                      style: const TextStyle(fontSize: 12, color: Colors.black87),
+                    ),
+                  ],
+                ),
+              ),
+              if (adaTunggakan)
+                FilledButton.tonal(
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => _tampilkanDaftarBelumBayar(belumBayar, bulan),
+                  child: const Text('Lihat'),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -757,11 +905,14 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
             children: [
               Icon(Icons.insights, size: 20, color: Color(0xFF2E7D32)),
               SizedBox(width: 8),
-              Text(
-                'Indikator Proposal Program',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  'Indikator Proposal Program',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -863,14 +1014,15 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
     VoidCallback? onTap,
   }) {
     return Card(
-      elevation: 1,
+      elevation: 0,
       margin: EdgeInsets.zero,
+      color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -880,56 +1032,79 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(ikon, color: warna, size: 20),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: warna.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(ikon, color: warna, size: 18),
+                  ),
                   if (badgeText != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: warna.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        badgeText,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: warna,
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: warna.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          badgeText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: warna,
+                          ),
                         ),
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Text(
                 judul,
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                nilai,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: warna,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 3),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  nilai,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: warna,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: progres,
-                  minHeight: 5,
-                  backgroundColor: Colors.grey.shade200,
+                  minHeight: 6,
+                  backgroundColor: const Color(0xFFF1F5F9),
                   valueColor: AlwaysStoppedAnimation<Color>(warna),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
                 subJudul,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 10, color: Colors.black45),
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  color: Color(0xFF94A3B8),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -947,25 +1122,29 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
         children: [
           const Text(
             'Aksi Cepat Pengurus',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0F172A),
+            ),
           ),
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: _tombolPintas(
-                  icon: Icons.payments_outlined,
+                  icon: Icons.payments_rounded,
                   label: 'Catat Iuran',
-                  warna: Colors.green.shade800,
+                  warna: const Color(0xFF166534),
                   onTap: _pilihDonaturUntukIuran,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: _tombolPintas(
-                  icon: Icons.volunteer_activism_outlined,
+                  icon: Icons.volunteer_activism_rounded,
                   label: 'Salurkan Bantuan',
-                  warna: Colors.teal.shade800,
+                  warna: const Color(0xFF0F766E),
                   onTap: () async {
                     final hasil = await Navigator.of(context).push<bool>(
                       MaterialPageRoute(
@@ -980,15 +1159,23 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: _tombolPintas(
-                  icon: Icons.person_add_alt_1_outlined,
+                  icon: Icons.person_add_rounded,
                   label: 'Tambah Anak',
-                  warna: Colors.blue.shade800,
+                  warna: const Color(0xFF1D4ED8),
                   onTap: () async {
+                    final lolos = await PinAuthDialog.verifikasi(
+                      context,
+                      judul: 'Verifikasi Tambah Penerima',
+                      pesan:
+                          'Masukkan 6 digit PIN pengurus untuk mendaftarkan anak penerima baru.',
+                    );
+                    if (!lolos || !context.mounted) return;
+
                     final hasil = await Navigator.of(context).push<bool>(
                       MaterialPageRoute(
                         builder: (_) => const AnakFormScreen(),
@@ -1000,12 +1187,12 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
                   },
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: _tombolPintas(
-                  icon: Icons.group_add_outlined,
+                  icon: Icons.group_add_rounded,
                   label: 'Tambah Donatur',
-                  warna: Colors.deepPurple.shade800,
+                  warna: const Color(0xFF7E22CE),
                   onTap: () async {
                     final hasil = await Navigator.of(context).push<bool>(
                       MaterialPageRoute(
@@ -1032,34 +1219,40 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
     required VoidCallback onTap,
   }) {
     return Card(
-      elevation: 1,
+      elevation: 0,
       margin: EdgeInsets.zero,
+      color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: warna.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: warna.withValues(alpha: 0.25), width: 1.2),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
             children: [
               CircleAvatar(
-                radius: 16,
+                radius: 17,
                 backgroundColor: warna.withValues(alpha: 0.12),
                 child: Icon(icon, size: 18, color: warna),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 9),
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade900,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1E293B),
                   ),
                 ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 16,
+                color: warna.withValues(alpha: 0.4),
               ),
             ],
           ),
@@ -1094,13 +1287,18 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Komparasi Dana Beasiswa',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
+              const Expanded(
+                child: Text(
+                  'Komparasi Dana Beasiswa',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '${(rasioPengumpulan * 100).toStringAsFixed(0)}% Terkumpul',
                 style: TextStyle(
@@ -1128,29 +1326,46 @@ Jazakumullahu khairan katsiran atas sedekah dan keistiqomahan Bapak/Ibu. Semoga 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Total Kas Masuk:',
-                      style: TextStyle(fontSize: 11, color: Colors.black54)),
-                  Text(
-                    formatRupiah(totalPemasukanKas),
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Total Kas Masuk:',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11, color: Colors.black54)),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        formatRupiah(totalPemasukanKas),
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const Text('Target Bersih Setahun:',
-                      style: TextStyle(fontSize: 11, color: Colors.black54)),
-                  Text(
-                    formatRupiah(totalKebutuhan),
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text('Target Bersih Setahun:',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11, color: Colors.black54)),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        formatRupiah(totalKebutuhan),
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

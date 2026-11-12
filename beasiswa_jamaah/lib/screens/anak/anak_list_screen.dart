@@ -89,7 +89,12 @@ class _AnakListScreenState extends State<AnakListScreen> {
                 // ─── Header Ringkasan & Indikator Target ───────────────────
                 Container(
                   padding: const EdgeInsets.all(16),
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                    ),
+                  ),
                   child: Row(
                     children: [
                       // Target Anak Terbantu (Target awal 10 anak)
@@ -99,8 +104,8 @@ class _AnakListScreenState extends State<AnakListScreen> {
                           label: 'Anak Terbantu',
                           nilai: '${anakProvider.totalAnakAktif} / 10',
                           sub: 'Target Awal: 10 Anak',
-                          warna: Colors.green[800]!,
-                          ikon: Icons.school,
+                          warna: const Color(0xFF166534),
+                          ikon: Icons.school_rounded,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -109,11 +114,11 @@ class _AnakListScreenState extends State<AnakListScreen> {
                       Expanded(
                         child: _boxRingkasan(
                           context,
-                          label: 'Kebutuhan Dana / Thn',
+                          label: 'Kebutuhan Tahunan',
                           nilai: formatRupiah(totalKebutuhan),
                           sub: 'Sudah potong PIP',
-                          warna: Colors.blue[800]!,
-                          ikon: Icons.account_balance_wallet,
+                          warna: const Color(0xFF1D4ED8),
+                          ikon: Icons.account_balance_wallet_rounded,
                         ),
                       ),
                     ],
@@ -124,39 +129,42 @@ class _AnakListScreenState extends State<AnakListScreen> {
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      FilterChip(
-                        selected: _filterJenjangIndex == 0,
-                        label: Text('Semua (${semuaAnak.length})'),
-                        onSelected: (_) =>
-                            setState(() => _filterJenjangIndex = 0),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        selected: _filterJenjangIndex == 1,
-                        label: Text(
-                            'SD (${semuaAnak.where((a) => a.jenjang == Jenjang.sd).length})'),
-                        onSelected: (_) =>
-                            setState(() => _filterJenjangIndex = 1),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        selected: _filterJenjangIndex == 2,
-                        label: Text(
-                            'SMP (${semuaAnak.where((a) => a.jenjang == Jenjang.smp).length})'),
-                        onSelected: (_) =>
-                            setState(() => _filterJenjangIndex = 2),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        selected: _filterJenjangIndex == 3,
-                        label: Text(
-                            'SMA (${semuaAnak.where((a) => a.jenjang == Jenjang.sma).length})'),
-                        onSelected: (_) =>
-                            setState(() => _filterJenjangIndex = 3),
-                      ),
-                    ],
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        FilterChip(
+                          selected: _filterJenjangIndex == 0,
+                          label: Text('Semua (${semuaAnak.length})'),
+                          onSelected: (_) =>
+                              setState(() => _filterJenjangIndex = 0),
+                        ),
+                        const SizedBox(width: 8),
+                        FilterChip(
+                          selected: _filterJenjangIndex == 1,
+                          label: Text(
+                              'SD (${semuaAnak.where((a) => a.jenjang == Jenjang.sd).length})'),
+                          onSelected: (_) =>
+                              setState(() => _filterJenjangIndex = 1),
+                        ),
+                        const SizedBox(width: 8),
+                        FilterChip(
+                          selected: _filterJenjangIndex == 2,
+                          label: Text(
+                              'SMP (${semuaAnak.where((a) => a.jenjang == Jenjang.smp).length})'),
+                          onSelected: (_) =>
+                              setState(() => _filterJenjangIndex = 2),
+                        ),
+                        const SizedBox(width: 8),
+                        FilterChip(
+                          selected: _filterJenjangIndex == 3,
+                          label: Text(
+                              'SMA (${semuaAnak.where((a) => a.jenjang == Jenjang.sma).length})'),
+                          onSelected: (_) =>
+                              setState(() => _filterJenjangIndex = 3),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -298,13 +306,18 @@ class _AnakListScreenState extends State<AnakListScreen> {
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Text(
-                                            '${anak.statusYatim.label} • ${anak.kondisiEkonomi.label}',
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.black54,
+                                          Expanded(
+                                            child: Text(
+                                              '${anak.statusYatim.label} • ${anak.kondisiEkonomi.label}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.black54,
+                                              ),
                                             ),
                                           ),
+                                          const SizedBox(width: 8),
                                           Text(
                                             formatRupiah(kebutuhanDana),
                                             style: TextStyle(
@@ -400,6 +413,7 @@ class _AnakListScreenState extends State<AnakListScreen> {
               ],
             ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_tambah_anak',
         icon: const Icon(Icons.person_add_alt_1),
         label: const Text('Tambah Anak'),
         onPressed: () async {
@@ -411,9 +425,12 @@ class _AnakListScreenState extends State<AnakListScreen> {
           );
           if (!lolos || !context.mounted) return;
 
-          Navigator.of(context).push(
+          final hasil = await Navigator.of(context).push<bool>(
             MaterialPageRoute(builder: (_) => const AnakFormScreen()),
           );
+          if (hasil == true && context.mounted) {
+            context.read<AnakProvider>().muatData();
+          }
         },
       ),
     );
@@ -428,40 +445,60 @@ class _AnakListScreenState extends State<AnakListScreen> {
     required IconData ikon,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(ikon, size: 16, color: warna),
-              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: warna.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(ikon, size: 16, color: warna),
+              ),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   label,
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w500,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            nilai,
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-              color: warna,
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              nilai,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: warna,
+              ),
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             sub,
-            style: const TextStyle(fontSize: 10, color: Colors.black45),
+            style: const TextStyle(
+              fontSize: 10.5,
+              color: Color(0xFF94A3B8),
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),

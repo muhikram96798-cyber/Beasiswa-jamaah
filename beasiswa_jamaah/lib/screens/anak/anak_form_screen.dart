@@ -202,7 +202,7 @@ class _AnakFormScreenState extends State<AnakFormScreen> {
             backgroundColor: Colors.green[800],
           ),
         );
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
@@ -373,6 +373,7 @@ class _AnakFormScreenState extends State<AnakFormScreen> {
                     flex: 3,
                     child: DropdownButtonFormField<Jenjang>(
                       initialValue: _jenjang,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Jenjang *',
                         prefixIcon: Icon(Icons.school_outlined),
@@ -380,7 +381,7 @@ class _AnakFormScreenState extends State<AnakFormScreen> {
                       items: Jenjang.values.map((j) {
                         return DropdownMenuItem(
                           value: j,
-                          child: Text(j.label),
+                          child: Text(j.label, overflow: TextOverflow.ellipsis),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -403,13 +404,14 @@ class _AnakFormScreenState extends State<AnakFormScreen> {
                     child: DropdownButtonFormField<int>(
                       key: ValueKey(_jenjang),
                       initialValue: _kelas,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Kelas *',
                       ),
                       items: _daftarKelasUntukJenjang(_jenjang).map((k) {
                         return DropdownMenuItem(
                           value: k,
-                          child: Text('Kelas $k'),
+                          child: Text('Kelas $k', overflow: TextOverflow.ellipsis),
                         );
                       }).toList(),
                       onChanged: (val) {
@@ -429,6 +431,7 @@ class _AnakFormScreenState extends State<AnakFormScreen> {
               // ─── Status Yatim / Piatu ─────────────────────────────────────
               DropdownButtonFormField<StatusYatim>(
                 initialValue: _statusYatim,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Status Keluarga / Yatim *',
                   prefixIcon: Icon(Icons.favorite_border),
@@ -436,7 +439,7 @@ class _AnakFormScreenState extends State<AnakFormScreen> {
                 items: StatusYatim.values.map((s) {
                   return DropdownMenuItem(
                     value: s,
-                    child: Text(s.label),
+                    child: Text(s.label, overflow: TextOverflow.ellipsis),
                   );
                 }).toList(),
                 onChanged: (val) {
@@ -448,6 +451,7 @@ class _AnakFormScreenState extends State<AnakFormScreen> {
               // ─── Kondisi Ekonomi ─────────────────────────────────────────
               DropdownButtonFormField<KondisiEkonomi>(
                 initialValue: _kondisiEkonomi,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Kondisi Ekonomi Keluarga *',
                   prefixIcon: Icon(Icons.home_work_outlined),
@@ -455,7 +459,7 @@ class _AnakFormScreenState extends State<AnakFormScreen> {
                 items: KondisiEkonomi.values.map((k) {
                   return DropdownMenuItem(
                     value: k,
-                    child: Text(k.label),
+                    child: Text(k.label, overflow: TextOverflow.ellipsis),
                   );
                 }).toList(),
                 onChanged: (val) {
@@ -509,6 +513,7 @@ class _AnakFormScreenState extends State<AnakFormScreen> {
               // ─── Status KIP / PIP ─────────────────────────────────────────
               DropdownButtonFormField<StatusPip>(
                 initialValue: _statusPip,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Status KIP / PIP Pemerintah *',
                   prefixIcon: Icon(Icons.card_membership_outlined),
@@ -518,7 +523,7 @@ class _AnakFormScreenState extends State<AnakFormScreen> {
                 items: StatusPip.values.map((p) {
                   return DropdownMenuItem(
                     value: p,
-                    child: Text(p.label),
+                    child: Text(p.label, overflow: TextOverflow.ellipsis),
                   );
                 }).toList(),
                 onChanged: (val) {

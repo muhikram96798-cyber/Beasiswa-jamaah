@@ -229,4 +229,20 @@ class Anak {
       keterangan: keterangan ?? this.keterangan,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! Anak) return false;
+    if (id != null && other.id != null) {
+      return id == other.id;
+    }
+    return id == other.id &&
+        kodeAnak == other.kodeAnak &&
+        namaLengkap == other.namaLengkap;
+  }
+
+  @override
+  int get hashCode =>
+      id != null ? id.hashCode : Object.hash(kodeAnak, namaLengkap);
 }

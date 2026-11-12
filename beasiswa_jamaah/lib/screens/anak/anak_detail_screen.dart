@@ -146,33 +146,58 @@ class _AnakDetailScreenState extends State<AnakDetailScreen> {
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Ubah Data',
-            onPressed: () {
-              Navigator.of(context).push(
+            onPressed: () async {
+              final hasil = await Navigator.of(context).push<bool>(
                 MaterialPageRoute(
                   builder: (_) => AnakFormScreen(anak: anakTerkini),
                 ),
               );
+              if (hasil == true && context.mounted) {
+                context.read<AnakProvider>().muatData();
+              }
             },
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.red),
-            tooltip: 'Hapus Data',
+            tooltip: 'Hapus Data Anak',
             onPressed: () async {
               final ok = await tampilkanKonfirmasi(
                 context: context,
-                judul: 'Hapus Data Anak?',
+                judul: 'Hapus Data Penerima Bantuan?',
                 pesan:
-                    'Data ${anakTerkini.namaLengkap} (${anakTerkini.kodeAnak}) akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.',
+                    'Apakah Anda yakin ingin menghapus data "${anakTerkini.namaLengkap}" (${anakTerkini.kodeAnak})?\n\n'
+                    'Catatan: Seluruh riwayat pengeluaran kas yang sudah disalurkan tetap aman dan TIDAK AKAN terhapus dari pembukuan (dana yang sudah disalurkan tidak akan kembali ke kas).',
                 destruktif: true,
-                labelKonfirmasi: 'Hapus',
+                labelKonfirmasi: 'Hapus Data Anak',
               );
               if (ok && context.mounted) {
-                await context.read<AnakProvider>().hapusAnak(anakTerkini.id!);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Data anak telah dihapus')),
+                final pct = context.read<PengaturanProvider>().pctCadangan;
+                final anakProvider = context.read<AnakProvider>();
+                final kasProvider = context.read<KasProvider>();
+                final penyaluranProvider = context.read<PenyaluranProvider>();
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                final warnaError = Theme.of(context).colorScheme.error;
+
+                try {
+                  await anakProvider.hapusAnak(anakTerkini.id!);
+                  await kasProvider.muatData(persentaseCadangan: pct);
+                  await penyaluranProvider.muatData();
+
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Data ${anakTerkini.namaLengkap} telah dihapus. Riwayat pembukuan kas tetap aman.'),
+                    ),
                   );
-                  Navigator.of(context).pop();
+                  navigator.pop();
+                } catch (e) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Gagal menghapus anak: $e'),
+                      backgroundColor: warnaError,
+                    ),
+                  );
                 }
               }
             },
@@ -420,11 +445,15 @@ class _AnakDetailScreenState extends State<AnakDetailScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Sisa Kebutuhan Belum Tersalurkan:',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.black87),
+                            const Expanded(
+                              child: Text(
+                                'Sisa Kebutuhan Belum Tersalurkan:',
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.black87),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               formatRupiah(sisaKebutuhan),
                               style: TextStyle(
@@ -591,35 +620,79 @@ class _AnakDetailScreenState extends State<AnakDetailScreen> {
                                 ),
                               ],
                             ),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline,
-                                  color: Colors.red, size: 20),
-                              tooltip: 'Batalkan & Kembalikan ke Kas',
-                              onPressed: () async {
-                                final provider = context.read<PenyaluranProvider>();
-                                final kas = context.read<KasProvider>();
-                                final messenger = ScaffoldMessenger.of(context);
-                                final setuju = await tampilkanKonfirmasi(
-                                  context: context,
-                                  judul: 'Batalkan Penyaluran?',
-                                  pesan:
-                                      'Penyaluran ${p.jenis.label} senilai ${formatRupiah(p.nominal)} akan dihapus dan nominalnya akan otomatis dikembalikan ke saldo kas.',
-                                  labelKonfirmasi: 'Hapus & Kembalikan Kas',
-                                  destruktif: true,
-                                );
+                            trailing: PopupMenuButton<String>(
+                              tooltip: 'Opsi Penyaluran',
+                              icon: const Icon(Icons.more_vert, size: 20),
+                              onSelected: (opsi) async {
+                                if (opsi == 'batal') {
+                                  final pct = context
+                                      .read<PengaturanProvider>()
+                                      .pctCadangan;
+                                  final provider =
+                                      context.read<PenyaluranProvider>();
+                                  final kas = context.read<KasProvider>();
+                                  final messenger =
+                                      ScaffoldMessenger.of(context);
+                                  final warnaError =
+                                      Theme.of(context).colorScheme.error;
 
-                                if (setuju && mounted) {
-                                  await provider.hapusPenyaluran(p.id!, anakTerkini.id!);
-                                  await kas.muatData();
-                                  await provider.muatPenyaluranAnak(anakTerkini.id!);
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                          'Penyaluran dibatalkan dan saldo kas dikembalikan.'),
-                                    ),
+                                  final setuju = await tampilkanKonfirmasi(
+                                    context: context,
+                                    judul: 'Batalkan Penyaluran Dana?',
+                                    pesan:
+                                        'Apakah Anda yakin ingin membatalkan penyaluran ${p.jenis.label} senilai ${formatRupiah(p.nominal)} untuk ${anakTerkini.namaLengkap}?\n\n'
+                                        'Perhatian: Gunakan opsi pembatalan ini HANYA jika terjadi salah catat / salah input. Dana sebesar ${formatRupiah(p.nominal)} akan ditarik kembali dan dimasukkan lagi ke saldo kas.',
+                                    labelKonfirmasi: 'Ya, Batalkan Penyaluran',
+                                    destruktif: true,
                                   );
+
+                                  if (setuju && mounted) {
+                                    try {
+                                      await provider.batalkanPenyaluran(
+                                          p.id!, anakTerkini.id!);
+                                      await kas.muatData(
+                                          persentaseCadangan: pct);
+                                      await provider
+                                          .muatPenyaluranAnak(anakTerkini.id!);
+                                      if (mounted) {
+                                        messenger.showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Penyaluran ${p.jenis.label} (${formatRupiah(p.nominal)}) berhasil dibatalkan. Dana dikembalikan ke kas.'),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        messenger.showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                                'Gagal membatalkan penyaluran: $e'),
+                                            backgroundColor: warnaError,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  }
                                 }
                               },
+                              itemBuilder: (ctx) => [
+                                PopupMenuItem<String>(
+                                  value: 'batal',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.undo,
+                                          color: Colors.orange[800], size: 20),
+                                      const SizedBox(width: 10),
+                                      const Text(
+                                        'Batalkan Penyaluran',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -733,13 +806,17 @@ class _AnakDetailScreenState extends State<AnakDetailScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Kebutuhan Dana Bersih Kas:',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                        const Expanded(
+                          child: Text(
+                            'Kebutuhan Dana Bersih Kas:',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Text(
                           formatRupiah(kebutuhanBersih),
                           style: TextStyle(
@@ -801,7 +878,12 @@ class _AnakDetailScreenState extends State<AnakDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('• $judul ($status)', style: const TextStyle(fontSize: 13)),
+          Expanded(
+            child: Text('• $judul ($status)',
+                style: const TextStyle(fontSize: 13),
+                overflow: TextOverflow.ellipsis),
+          ),
+          const SizedBox(width: 8),
           Text(bobot,
               style: const TextStyle(fontSize: 12, color: Colors.black54)),
         ],

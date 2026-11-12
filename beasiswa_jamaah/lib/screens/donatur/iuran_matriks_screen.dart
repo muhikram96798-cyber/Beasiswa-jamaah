@@ -8,8 +8,11 @@ import 'package:provider/provider.dart';
 import '../../models/donatur.dart';
 import '../../models/iuran.dart';
 import '../../providers/donatur_provider.dart';
+import '../../providers/kas_provider.dart';
+import '../../providers/pengaturan_provider.dart';
 import '../../services/donatur_service.dart';
 import '../../utils/rupiah_formatter.dart';
+import '../../utils/whatsapp_helper.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/konfirmasi_dialog.dart';
 import 'catat_iuran_dialog.dart';
@@ -85,16 +88,153 @@ class _IuranMatriksScreenState extends State<IuranMatriksScreen> {
               );
 
               if (konfirmasi && mounted) {
-                await context.read<DonaturProvider>().batalkanIuran(iuran.id!);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Pembayaran iuran dibatalkan')),
-                  );
+                try {
+                  await context.read<DonaturProvider>().batalkanIuran(iuran.id!);
+                  if (mounted) {
+                    context.read<KasProvider>().muatData();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Pembayaran iuran dibatalkan')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Gagal membatalkan iuran: $e'),
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                    );
+                  }
                 }
               }
             },
           ),
         ],
+      ),
+    );
+  }
+
+  void _tampilkanAksiBelumBayar(Donatur donatur, int bulan) {
+    final namaBulan = DonaturService.getNamaBulan(bulan);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          donatur.namaKeluarga,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Iuran Bulan $namaBulan $_tahunTerpilih • Belum Bayar',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.orange.shade900,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+              const Divider(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(
+                  backgroundColor: Color(0xFFE8F5E9),
+                  child: Icon(Icons.chat_outlined, color: Color(0xFF2E7D32)),
+                ),
+                title: const Text(
+                  'Kirim Pengingat WhatsApp',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  donatur.nomorTelepon != null && donatur.nomorTelepon!.isNotEmpty
+                      ? 'No. WA: ${donatur.nomorTelepon}'
+                      : 'Salin template pesan (belum ada nomor WA)',
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  WhatsAppHelper.kirimPengingatWa(
+                    context: context,
+                    donatur: donatur,
+                    bulan: bulan,
+                    pengaturan: context.read<PengaturanProvider>(),
+                  );
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(
+                  backgroundColor: Colors.blue.shade50,
+                  child: Icon(Icons.add_card_outlined, color: Colors.blue.shade800),
+                ),
+                title: const Text(
+                  'Catat Pembayaran Iuran',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  'Nominal komitmen: ${formatRupiah(donatur.nominalIuran)}',
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final berhasil = await CatatIuranDialog.show(
+                    context,
+                    donatur: donatur,
+                    bulanAwal: bulan,
+                    tahunAwal: _tahunTerpilih,
+                  );
+                  if (berhasil == true && mounted) {
+                    context.read<KasProvider>().muatData();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Iuran ${donatur.namaKeluarga} bulan $namaBulan berhasil dicatat',
+                        ),
+                        backgroundColor: Colors.green[800],
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -234,28 +374,11 @@ class _IuranMatriksScreenState extends State<IuranMatriksScreen> {
 
                                 return DataCell(
                                   InkWell(
-                                    onTap: () async {
+                                    onTap: () {
                                       if (isLunas) {
                                         _tampilkanDetailIuran(donatur, iuran);
                                       } else if (donatur.statusAktif) {
-                                        final berhasil =
-                                            await CatatIuranDialog.show(
-                                          context,
-                                          donatur: donatur,
-                                          bulanAwal: bulan,
-                                          tahunAwal: _tahunTerpilih,
-                                        );
-                                        if (berhasil == true && context.mounted) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                  'Iuran ${donatur.namaKeluarga} bulan ${DonaturService.getNamaBulan(bulan)} berhasil dicatat'),
-                                              backgroundColor:
-                                                  Colors.green[800],
-                                            ),
-                                          );
-                                        }
+                                        _tampilkanAksiBelumBayar(donatur, bulan);
                                       }
                                     },
                                     child: Center(
@@ -309,28 +432,45 @@ class _IuranMatriksScreenState extends State<IuranMatriksScreen> {
                                 }),
                                 cells: [
                                   DataCell(
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
+                                    Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          donatur.namaKeluarga,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            color: donatur.statusAktif
-                                                ? Colors.black87
-                                                : Colors.grey,
-                                          ),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              donatur.namaKeluarga,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: donatur.statusAktif
+                                                    ? Colors.black87
+                                                    : Colors.grey,
+                                              ),
+                                            ),
+                                            if (!donatur.statusAktif) ...[
+                                              const SizedBox(width: 4),
+                                              const Text(
+                                                '(Berhenti)',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
-                                        if (!donatur.statusAktif) ...[
-                                          const SizedBox(width: 4),
-                                          const Text(
-                                            '(Berhenti)',
+                                        if (donatur.nomorTelepon != null &&
+                                            donatur.nomorTelepon!.isNotEmpty)
+                                          Text(
+                                            donatur.nomorTelepon!,
                                             style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.red,
+                                              fontSize: 11,
+                                              color: Colors.grey.shade600,
                                             ),
                                           ),
-                                        ],
                                       ],
                                     ),
                                   ),

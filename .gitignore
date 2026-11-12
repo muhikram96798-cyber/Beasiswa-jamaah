@@ -1,8 +1,9 @@
 # Flutter SDK lokal — jangan ikut di-commit (ukuran >1GB)
 tools/flutter/
 
-# Build output
+# Build output & APK
 beasiswa_jamaah/build/
+*.apk
 
 # Dart/Flutter generated files
 beasiswa_jamaah/.dart_tool/

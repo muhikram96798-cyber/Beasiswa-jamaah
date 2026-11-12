@@ -137,4 +137,8 @@ class PenyaluranProvider with ChangeNotifier {
       rethrow;
     }
   }
+
+  /// Batalkan penyaluran dana (salah catat/salah input) dan kembalikan kas
+  Future<void> batalkanPenyaluran(int penyaluranId, int anakId) =>
+      hapusPenyaluran(penyaluranId, anakId);
 }

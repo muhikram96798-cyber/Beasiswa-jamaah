@@ -55,6 +55,8 @@ Future<String?> tampilkanKonfirmasiDenganAlasan({
     context: context,
     barrierDismissible: false,
     builder: (ctx) => AlertDialog(
+      scrollable: true,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       title: Text(judul),
       content: Form(
         key: formKey,

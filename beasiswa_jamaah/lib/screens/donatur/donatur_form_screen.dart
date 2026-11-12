@@ -22,6 +22,7 @@ class DonaturFormScreen extends StatefulWidget {
 class _DonaturFormScreenState extends State<DonaturFormScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _namaController;
+  late TextEditingController _teleponController;
   late TextEditingController _nominalController;
   late TextEditingController _keteranganController;
 
@@ -36,6 +37,7 @@ class _DonaturFormScreenState extends State<DonaturFormScreen> {
     super.initState();
     final d = widget.donatur;
     _namaController = TextEditingController(text: d?.namaKeluarga ?? '');
+    _teleponController = TextEditingController(text: d?.nomorTelepon ?? '');
     _nominalController = TextEditingController(
       text: d != null ? d.nominalIuran.toString() : '',
     );
@@ -52,6 +54,7 @@ class _DonaturFormScreenState extends State<DonaturFormScreen> {
   @override
   void dispose() {
     _namaController.dispose();
+    _teleponController.dispose();
     _nominalController.dispose();
     _keteranganController.dispose();
     super.dispose();
@@ -75,6 +78,9 @@ class _DonaturFormScreenState extends State<DonaturFormScreen> {
 
     final nominal = parseRupiah(_nominalController.text) ?? 0;
     final tanggalDaftarStr = DateFormat('yyyy-MM-dd').format(_tanggalDaftar);
+    final telepon = _teleponController.text.trim().isEmpty
+        ? null
+        : _teleponController.text.trim();
 
     setState(() => _sedangMenyimpan = true);
 
@@ -84,6 +90,7 @@ class _DonaturFormScreenState extends State<DonaturFormScreen> {
       if (_isEdit) {
         final updated = widget.donatur!.copyWith(
           namaKeluarga: _namaController.text.trim(),
+          nomorTelepon: telepon,
           nominalIuran: nominal,
           statusAktif: _statusAktif,
           tanggalDaftar: tanggalDaftarStr,
@@ -95,6 +102,7 @@ class _DonaturFormScreenState extends State<DonaturFormScreen> {
       } else {
         final baru = Donatur(
           namaKeluarga: _namaController.text.trim(),
+          nomorTelepon: telepon,
           nominalIuran: nominal,
           statusAktif: _statusAktif,
           tanggalDaftar: tanggalDaftarStr,
@@ -116,7 +124,7 @@ class _DonaturFormScreenState extends State<DonaturFormScreen> {
             backgroundColor: Colors.green[800],
           ),
         );
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
@@ -164,6 +172,29 @@ class _DonaturFormScreenState extends State<DonaturFormScreen> {
                   }
                   if (val.trim().length < 3) {
                     return 'Nama terlalu pendek (minimal 3 karakter)';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Nomor HP / WhatsApp
+              TextFormField(
+                controller: _teleponController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Nomor WhatsApp / HP (Opsional)',
+                  hintText: 'Contoh: 081234567890',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                  helperText:
+                      'Digunakan untuk mengirim pesan pengingat tagihan iuran via WhatsApp',
+                ),
+                validator: (val) {
+                  if (val != null && val.trim().isNotEmpty) {
+                    final clean = val.replaceAll(RegExp(r'[^0-9]'), '');
+                    if (clean.length < 9) {
+                      return 'Nomor telepon terlalu pendek (minimal 9 digit)';
+                    }
                   }
                   return null;
                 },

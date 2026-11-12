@@ -160,6 +160,7 @@ class DonaturProvider extends ChangeNotifier {
     int? tahun,
   }) async {
     final targetTahun = tahun ?? _tahunAktif;
+    _tahunAktif = targetTahun;
     _loading = true;
     _pesanError = null;
     notifyListeners();
@@ -172,7 +173,7 @@ class DonaturProvider extends ChangeNotifier {
         nominal: nominal,
         tanggalBayar: tanggalBayar,
       );
-      await muatData(tahun: _tahunAktif);
+      await muatData(tahun: targetTahun);
     } catch (e) {
       _pesanError = e.toString();
       _loading = false;

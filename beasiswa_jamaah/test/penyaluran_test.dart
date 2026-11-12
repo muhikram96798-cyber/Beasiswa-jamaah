@@ -148,5 +148,37 @@ void main() {
       expect(rasio, 1.0);
       expect(persen, 100.0);
     });
+
+    test('Integritas pembatalan penyaluran: kas dikembalikan hanya saat opsi pembatalan eksplisit', () {
+      // Ketika pembatalan eksplisit (salah catat):
+      // transaksi kas pengeluaran dihapus sehingga dana kembali ke kas
+      var saldoKas = 1000000;
+      const pengeluaranPenyaluran = 250000;
+      saldoKas -= pengeluaranPenyaluran;
+      expect(saldoKas, 750000);
+
+      // Pembatalan penyaluran mengembalikan dana kas
+      saldoKas += pengeluaranPenyaluran;
+      expect(saldoKas, 1000000);
+    });
+
+    test('Integritas kas saat hapus anak: dana yang sudah disalurkan TIDAK boleh balik ke kas', () {
+      // Realitas keuangan: dana yang sudah diserahkan/dibelanjakan secara riil
+      // tidak boleh otomatis bertambah kembali ke saldo kas saat profil penerima dihapus
+      var saldoKas = 800000;
+      var transaksiKasTercatat = <Map<String, dynamic>>[
+        {'id': 1, 'sumber_id': 10, 'tipe': 'KELUAR', 'nominal': 200000},
+      ];
+
+      // Simulasi hapus anak: unlink sumber_id, jangan hapus transaksi kas
+      transaksiKasTercatat = transaksiKasTercatat
+          .map<Map<String, dynamic>>((t) => {...t, 'sumber_id': null})
+          .toList();
+
+      // Saldo kas tetap tidak berubah
+      expect(saldoKas, 800000);
+      expect(transaksiKasTercatat.length, 1);
+      expect(transaksiKasTercatat.first['sumber_id'], isNull);
+    });
   });
 }

@@ -156,7 +156,7 @@ class _TransaksiFormScreenState extends State<TransaksiFormScreen> {
                 : Colors.orange[900],
           ),
         );
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
@@ -301,6 +301,7 @@ class _TransaksiFormScreenState extends State<TransaksiFormScreen> {
               DropdownButtonFormField<KategoriTransaksi>(
                 key: ValueKey(_tipe),
                 initialValue: _kategori,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Kategori Transaksi *',
                   prefixIcon: Icon(Icons.category_outlined),
@@ -311,7 +312,7 @@ class _TransaksiFormScreenState extends State<TransaksiFormScreen> {
                     .map((kat) {
                   return DropdownMenuItem(
                     value: kat,
-                    child: Text(kat.label),
+                    child: Text(kat.label, overflow: TextOverflow.ellipsis),
                   );
                 }).toList(),
                 onChanged: (val) {

@@ -144,15 +144,55 @@ class LaporanPdfService {
           tgl.month <= bulanAkhir;
     }).toList();
 
-    // Map total penyaluran kumulatif per anak di tahun ajaran ini
+    // Map total penyaluran kumulatif per anak s.d. akhir periode terpilih
     final totalPenyaluranTahunPerAnak = <int, int>{};
     for (final p in daftarPenyaluran) {
       final tgl = DateTime.tryParse(p.tanggal);
-      if (tgl != null && tgl.year == tahunAjaran) {
+      if (tgl != null &&
+          (tgl.year < tahunAjaran ||
+              (tgl.year == tahunAjaran && tgl.month <= bulanAkhir))) {
         totalPenyaluranTahunPerAnak[p.anakId] =
             (totalPenyaluranTahunPerAnak[p.anakId] ?? 0) + p.nominal;
       }
     }
+
+    // Kalkulasi 4 Indikator Proposal Program
+    final anakAktifList = daftarAnak.where((a) => a.aktif).toList();
+    int targetKebutuhanTotal = 0;
+    int realisasiPenyaluranTotal = 0;
+    for (final a in anakAktifList) {
+      final butuh = hitungKebutuhanDana(
+        jenjang: a.jenjang,
+        statusPip: a.statusPip,
+        biayaSd: biayaSd,
+        biayaSmp: biayaSmp,
+        biayaSma: biayaSma,
+        pipSd: pipSd,
+        pipSmp: pipSmp,
+        pipSma: pipSma,
+      );
+      targetKebutuhanTotal += butuh;
+      realisasiPenyaluranTotal += (totalPenyaluranTahunPerAnak[a.id] ?? 0);
+    }
+    final double persenKebutuhan = targetKebutuhanTotal > 0
+        ? ((realisasiPenyaluranTotal / targetKebutuhanTotal) * 100.0)
+            .clamp(0.0, 100.0)
+        : 100.0;
+
+    final donaturAktifList = daftarDonatur.where((d) => d.statusAktif).toList();
+    final totalSlotBulan =
+        donaturAktifList.length * (bulanAkhir - bulanMulai + 1);
+    int totalSlotLunas = 0;
+    for (final d in donaturAktifList) {
+      for (int b = bulanMulai; b <= bulanAkhir; b++) {
+        if (matriksIuran[d.id]?[b] != null) {
+          totalSlotLunas++;
+        }
+      }
+    }
+    final double persenTertib = totalSlotBulan > 0
+        ? ((totalSlotLunas / totalSlotBulan) * 100.0).clamp(0.0, 100.0)
+        : 100.0;
 
     // Tanggal Cetak
     final now = DateTime.now();
@@ -194,14 +234,16 @@ class LaporanPdfService {
 
             // 2. CAPAIAN INDIKATOR PROPOSAL
             pw.Text(
-              '2. CAPAIAN INDIKATOR PROGRAM',
+              '2. CAPAIAN 4 INDIKATOR PROPOSAL PROGRAM',
               style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
             ),
             pw.SizedBox(height: 6),
             _buildTabelIndikator(
-              anakAktif: daftarAnak.where((a) => a.aktif).length,
+              anakAktif: anakAktifList.length,
               targetAnak: 10,
               putusSekolah: putusSekolah,
+              persenKebutuhan: persenKebutuhan,
+              persenTertib: persenTertib,
             ),
             pw.SizedBox(height: 14),
 
@@ -336,6 +378,13 @@ class LaporanPdfService {
   }) {
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(2),
+        1: pw.FlexColumnWidth(2),
+        2: pw.FlexColumnWidth(2.2),
+        3: pw.FlexColumnWidth(2.2),
+        4: pw.FlexColumnWidth(2.2),
+      },
       children: [
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.green50),
@@ -368,21 +417,29 @@ class LaporanPdfService {
     required int anakAktif,
     required int targetAnak,
     required int putusSekolah,
+    required double persenKebutuhan,
+    required double persenTertib,
   }) {
     final statusPutus = putusSekolah == 0
-        ? 'Target Terjaga (0 Anak Putus Sekolah)'
+        ? 'Target Terjaga (0 Kasus)'
         : '$putusSekolah Anak (Perlu Pendampingan)';
 
     final statusAnak = anakAktif >= targetAnak
         ? 'Target Tercapai ($anakAktif / $targetAnak Anak)'
         : '$anakAktif / $targetAnak Anak Terbantu';
 
+    final statusKebutuhan =
+        '${persenKebutuhan.toStringAsFixed(1)}% Kebutuhan Terpenuhi';
+
+    final statusTertib =
+        '${persenTertib.toStringAsFixed(1)}% Pembayaran Iuran Tertib';
+
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
       columnWidths: const {
-        0: pw.FlexColumnWidth(2),
-        1: pw.FlexColumnWidth(2),
-        2: pw.FlexColumnWidth(3),
+        0: pw.FlexColumnWidth(2.5),
+        1: pw.FlexColumnWidth(1.8),
+        2: pw.FlexColumnWidth(2.7),
       },
       children: [
         pw.TableRow(
@@ -395,16 +452,30 @@ class LaporanPdfService {
         ),
         pw.TableRow(
           children: [
-            _selData('Anak Yatim/Dhuafa Terbantu'),
+            _selData('1. Anak Yatim/Dhuafa Terbantu'),
             _selData('Tahap Awal: 10 Anak', align: pw.TextAlign.center),
             _selData(statusAnak, isBold: true),
           ],
         ),
         pw.TableRow(
           children: [
-            _selData('Anak Putus Sekolah'),
-            _selData('0 Anak (Nol Kasus)', align: pw.TextAlign.center),
+            _selData('2. Anak Putus Sekolah'),
+            _selData('0 Kasus (Nol Kasus)', align: pw.TextAlign.center),
             _selData(statusPutus, isBold: true),
+          ],
+        ),
+        pw.TableRow(
+          children: [
+            _selData('3. Pemenuhan Kebutuhan Sekolah'),
+            _selData('100% Kebutuhan Terpenuhi', align: pw.TextAlign.center),
+            _selData(statusKebutuhan, isBold: true),
+          ],
+        ),
+        pw.TableRow(
+          children: [
+            _selData('4. Ketertiban Iuran Jamaah'),
+            _selData('100% Jamaah Tertib', align: pw.TextAlign.center),
+            _selData(statusTertib, isBold: true),
           ],
         ),
       ],
@@ -425,11 +496,19 @@ class LaporanPdfService {
 
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      columnWidths: {
+        0: const pw.FixedColumnWidth(18), // No
+        1: const pw.FlexColumnWidth(3.0), // Nama Keluarga Donatur
+        2: const pw.FlexColumnWidth(1.8), // Iuran/Bln
+        for (int i = 0; i < listBulan.length; i++)
+          (3 + i): const pw.FlexColumnWidth(0.9), // Tiap bulan
+        (3 + listBulan.length): const pw.FlexColumnWidth(1.8), // Total
+      },
       children: [
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.green50),
           children: [
-            _selHeader('No', width: 24),
+            _selHeader('No', width: 18),
             _selHeader('Nama Keluarga Donatur'),
             _selHeader('Iuran/Bln'),
             ...listBulan.map(
@@ -441,7 +520,11 @@ class LaporanPdfService {
         if (daftarDonatur.isEmpty)
           pw.TableRow(
             children: [
-              _selData('Belum ada data donatur', colSpan: listBulan.length + 4),
+              _selData('-', align: pw.TextAlign.center),
+              _selData('Belum ada data donatur terdaftar'),
+              _selData('-', align: pw.TextAlign.center),
+              ...listBulan.map((_) => _selData('-', align: pw.TextAlign.center)),
+              _selData('-', align: pw.TextAlign.center),
             ],
           )
         else
@@ -462,10 +545,16 @@ class LaporanPdfService {
               }
             }).toList();
 
+            final namaTampil = d.statusAktif
+                ? (d.nomorTelepon != null && d.nomorTelepon!.trim().isNotEmpty
+                    ? '${d.namaKeluarga}\n(${d.nomorTelepon})'
+                    : d.namaKeluarga)
+                : '${d.namaKeluarga} (Nonaktif)';
+
             return pw.TableRow(
               children: [
                 _selData('$idx', align: pw.TextAlign.center),
-                _selData(d.namaKeluarga),
+                _selData(namaTampil),
                 _selData(formatRupiah(d.nominalIuran),
                     align: pw.TextAlign.right),
                 ...statusPerBulan,
@@ -491,6 +580,14 @@ class LaporanPdfService {
   }) {
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      columnWidths: const {
+        0: pw.FixedColumnWidth(28), // Kode
+        1: pw.FlexColumnWidth(2.4), // Inisial & Jenjang
+        2: pw.FlexColumnWidth(1.8), // Status KIP/PIP
+        3: pw.FlexColumnWidth(2.2), // Target Kebutuhan/Thn
+        4: pw.FlexColumnWidth(2.2), // Tersalurkan
+        5: pw.FlexColumnWidth(2.2), // Sisa Kebutuhan
+      },
       children: [
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.green50),
@@ -498,7 +595,7 @@ class LaporanPdfService {
             _selHeader('Kode'),
             _selHeader('Inisial & Jenjang'),
             _selHeader('Status KIP/PIP'),
-            _selHeader('Target Kebutuhan'),
+            _selHeader('Target Kebutuhan/Thn'),
             _selHeader('Tersalurkan'),
             _selHeader('Sisa Kebutuhan'),
           ],
@@ -506,7 +603,12 @@ class LaporanPdfService {
         if (daftarAnak.isEmpty)
           pw.TableRow(
             children: [
-              _selData('Belum ada data anak penerima beasiswa', colSpan: 6),
+              _selData('-', align: pw.TextAlign.center),
+              _selData('Belum ada data anak penerima beasiswa'),
+              _selData('-', align: pw.TextAlign.center),
+              _selData('-', align: pw.TextAlign.center),
+              _selData('-', align: pw.TextAlign.center),
+              _selData('-', align: pw.TextAlign.center),
             ],
           )
         else
@@ -551,6 +653,13 @@ class LaporanPdfService {
 
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      columnWidths: const {
+        0: pw.FixedColumnWidth(45), // Tgl
+        1: pw.FlexColumnWidth(2.5), // Penerima / Toko
+        2: pw.FlexColumnWidth(1.5), // Jenis
+        3: pw.FlexColumnWidth(2.5), // Keterangan / Item
+        4: pw.FlexColumnWidth(2.0), // Nominal
+      },
       children: [
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.green50),
@@ -565,11 +674,14 @@ class LaporanPdfService {
         if (penyaluranList.isEmpty)
           pw.TableRow(
             children: [
-              _selData('Belum ada penyaluran bantuan pada periode ini',
-                  colSpan: 5),
+              _selData('-', align: pw.TextAlign.center),
+              _selData('Belum ada penyaluran bantuan pada periode ini'),
+              _selData('-', align: pw.TextAlign.center),
+              _selData('-', align: pw.TextAlign.center),
+              _selData('-', align: pw.TextAlign.center),
             ],
           )
-        else
+        else ...[
           ...penyaluranList.map((p) {
             final anak = mapAnak[p.anakId];
             final tgl = DateTime.tryParse(p.tanggal);
@@ -594,6 +706,25 @@ class LaporanPdfService {
               ],
             );
           }),
+          // Baris Total Penyaluran Periode
+          pw.TableRow(
+            decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+            children: [
+              _selData('Total', align: pw.TextAlign.center, isBold: true),
+              _selData('${penyaluranList.length} transaksi penyaluran',
+                  isBold: true),
+              _selData('-', align: pw.TextAlign.center),
+              _selData('-', align: pw.TextAlign.center),
+              _selData(
+                formatRupiah(
+                  penyaluranList.fold(0, (sum, p) => sum + p.nominal),
+                ),
+                align: pw.TextAlign.right,
+                isBold: true,
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
@@ -656,7 +787,6 @@ class LaporanPdfService {
     pw.TextAlign align = pw.TextAlign.left,
     bool isBold = false,
     PdfColor? color,
-    int? colSpan,
   }) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),

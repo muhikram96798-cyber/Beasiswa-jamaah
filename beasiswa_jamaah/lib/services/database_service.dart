@@ -9,7 +9,7 @@ import '../models/pengaturan.dart';
 
 class DatabaseService {
   static const String _dbName = 'beasiswa_jamaah.db';
-  static const int _dbVersion = 2;
+  static const int _dbVersion = 3;
 
   // Singleton
   DatabaseService._internal();
@@ -51,6 +51,13 @@ class DatabaseService {
         );
       } catch (_) {}
     }
+    if (oldVersion < 3) {
+      try {
+        await db.execute(
+          'ALTER TABLE donatur ADD COLUMN nomor_telepon TEXT',
+        );
+      } catch (_) {}
+    }
   }
 
   Future<void> _createTablesV1(Database db) async {
@@ -67,6 +74,7 @@ class DatabaseService {
       CREATE TABLE IF NOT EXISTS donatur (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nama_keluarga TEXT NOT NULL,
+        nomor_telepon TEXT,
         nominal_iuran INTEGER NOT NULL,
         status_aktif INTEGER NOT NULL DEFAULT 1,
         tanggal_daftar TEXT NOT NULL,

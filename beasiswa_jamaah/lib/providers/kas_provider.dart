@@ -25,9 +25,12 @@ class KasProvider extends ChangeNotifier {
   bool _loading = false;
   String? _pesanError;
 
+  int _persentaseCadangan = 10;
+
   List<TransaksiKas> get daftarTransaksi => _daftarTransaksi;
   RingkasanKas get ringkasan => _ringkasan;
   RingkasanKas get ringkasanKas => _ringkasan;
+  int get persentaseCadangan => _persentaseCadangan;
   bool get loading => _loading;
   String? get pesanError => _pesanError;
 
@@ -40,7 +43,10 @@ class KasProvider extends ChangeNotifier {
       .toList();
 
   /// Muat riwayat transaksi dan hitung ulang saldo serta dana cadangan
-  Future<void> muatData({int persentaseCadangan = 10}) async {
+  Future<void> muatData({int? persentaseCadangan}) async {
+    if (persentaseCadangan != null) {
+      _persentaseCadangan = persentaseCadangan;
+    }
     _loading = true;
     _pesanError = null;
     notifyListeners();
@@ -49,7 +55,7 @@ class KasProvider extends ChangeNotifier {
       _daftarTransaksi = await _service.getSemuaTransaksi();
       _ringkasan = RingkasanKas.hitung(
         _daftarTransaksi,
-        persentaseCadangan: persentaseCadangan,
+        persentaseCadangan: _persentaseCadangan,
       );
     } catch (e) {
       _pesanError = 'Gagal memuat kas: ${e.toString()}';

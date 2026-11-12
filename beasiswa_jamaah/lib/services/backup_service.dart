@@ -81,6 +81,10 @@ class BackupService {
     }
 
     // 2. Validasi Header SQLite ("SQLite format 3")
+    final ukuran = await fileSumber.length();
+    if (ukuran < 16) {
+      throw Exception('Ukuran file terlalu kecil dan bukan database yang sah.');
+    }
     final bytes = await fileSumber.openRead(0, 16).first;
     const headerSqlite = [
       0x53, 0x51, 0x4C, 0x69, 0x74, 0x65, 0x20, 0x66,
@@ -97,12 +101,28 @@ class BackupService {
       }
     }
 
-    // 3. Tutup koneksi database aktif
+    // 3. Validasi Keberadaan Tabel Utama Beasiswa Jamaah
+    Database? dbUji;
+    try {
+      dbUji = await openReadOnlyDatabase(pathDipilih);
+      final tabel = await dbUji.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('pengaturan', 'anak', 'donatur', 'transaksi_kas')",
+      );
+      if (tabel.length < 4) {
+        throw Exception(
+          'File SQLite ini bukan cadangan Beasiswa Jamaah (struktur tabel tidak lengkap).',
+        );
+      }
+    } finally {
+      await dbUji?.close();
+    }
+
+    // 4. Tutup koneksi database aktif
     await DatabaseService.instance.close();
 
     final targetPath = await getDatabasePath();
 
-    // 4. Hapus file WAL dan SHM lama jika ada untuk mencegah konflik
+    // 5. Hapus file WAL dan SHM lama jika ada untuk mencegah konflik
     final walFile = File('$targetPath-wal');
     if (await walFile.exists()) await walFile.delete();
     final shmFile = File('$targetPath-shm');

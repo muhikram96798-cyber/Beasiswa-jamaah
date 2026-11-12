@@ -12,6 +12,7 @@ import '../../providers/donatur_provider.dart';
 import '../../providers/kas_provider.dart';
 import '../../providers/pengaturan_provider.dart';
 import '../../providers/penyaluran_provider.dart';
+import '../../services/kas_service.dart';
 import '../../services/laporan_pdf_service.dart';
 import '../../utils/rupiah_formatter.dart';
 import 'pratinjau_laporan_screen.dart';
@@ -24,7 +25,10 @@ class LaporanScreen extends StatefulWidget {
 }
 
 class _LaporanScreenState extends State<LaporanScreen> {
-  PeriodeLaporan _periodeTerpilih = PeriodeLaporan.semester1;
+  // Default periode cerdas: jika bulan Juli ke atas, default ke Semester 2 agar transaksi langsung terlihat
+  PeriodeLaporan _periodeTerpilih = DateTime.now().month <= 6
+      ? PeriodeLaporan.semester1
+      : PeriodeLaporan.semester2;
   int? _tahunTerpilih;
 
   @override
@@ -137,8 +141,17 @@ class _LaporanScreenState extends State<LaporanScreen> {
     final penyaluranProv = context.watch<PenyaluranProvider>();
 
     final tahunAktif = _tahunTerpilih ?? pengaturanProv.tahunAjaranAktif;
+    final baseTahun = pengaturanProv.tahunAjaranAktif;
+    final daftarPilihanTahun = {
+      baseTahun - 2,
+      baseTahun - 1,
+      baseTahun,
+      baseTahun + 1,
+      ?_tahunTerpilih,
+    }.toList()
+      ..sort();
 
-    // Filter kalkulasi ringkas untuk tampilan on-screen
+    // Filter kalkulasi ringkas untuk tampilan on-screen periode ini
     final bulanMulai = _periodeTerpilih.bulanMulai;
     final bulanAkhir = _periodeTerpilih.bulanAkhir;
 
@@ -159,6 +172,20 @@ class _LaporanScreenState extends State<LaporanScreen> {
         totalKeluarPeriode += t.nominal;
       }
     }
+
+    // Filter transaksi kumulatif s.d. periode terpilih untuk melihat saldo kas & dana cadangan real-time
+    final transaksiKumulatif = kasProv.daftarTransaksi.where((t) {
+      final tgl = DateTime.tryParse(t.tanggal);
+      if (tgl == null) return false;
+      if (tgl.year < tahunAktif) return true;
+      if (tgl.year == tahunAktif && tgl.month <= bulanAkhir) return true;
+      return false;
+    }).toList();
+
+    final ringkasanKumulatif = RingkasanKas.hitung(
+      transaksiKumulatif,
+      persentaseCadangan: pengaturanProv.persentaseCadangan,
+    );
 
     final totalAnakAktif = anakProv.anakAktif.length;
     final totalDonaturAktif = donaturProv.donaturAktif.length;
@@ -206,14 +233,17 @@ class _LaporanScreenState extends State<LaporanScreen> {
                             color: Theme.of(context).colorScheme.primary,
                           ),
                           const SizedBox(width: 8),
-                          const Text(
-                            'Pilih Periode Laporan',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                          const Expanded(
+                            child: Text(
+                              'Pilih Periode Laporan',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const Spacer(),
+                          const SizedBox(width: 8),
                           // Pilihan Tahun
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -231,11 +261,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
                                 value: tahunAktif,
                                 isDense: true,
                                 icon: const Icon(Icons.arrow_drop_down),
-                                items: [
-                                  tahunAktif - 1,
-                                  tahunAktif,
-                                  tahunAktif + 1,
-                                ].map((thn) {
+                                items: daftarPilihanTahun.map((thn) {
                                   return DropdownMenuItem<int>(
                                     value: thn,
                                     child: Text(
@@ -265,6 +291,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
                       const SizedBox(height: 16),
                       // Pilihan Semester / Setahun
                       SegmentedButton<PeriodeLaporan>(
+                        showSelectedIcon: false,
                         segments: const [
                           ButtonSegment(
                             value: PeriodeLaporan.semester1,
@@ -312,12 +339,14 @@ class _LaporanScreenState extends State<LaporanScreen> {
                             color: Color(0xFF2E7D32),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            'Ringkasan ${_periodeTerpilih.label}',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1B5E20),
+                          Expanded(
+                            child: Text(
+                              'Ringkasan Keuangan ${_periodeTerpilih.label}',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1B5E20),
+                              ),
                             ),
                           ),
                         ],
@@ -327,7 +356,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
                         children: [
                           Expanded(
                             child: _buildItemRingkasan(
-                              label: 'Pemasukan Kas',
+                              label: 'Pemasukan Periode',
                               nilai: formatRupiah(totalMasukPeriode),
                               warna: const Color(0xFF2E7D32),
                               icon: Icons.arrow_downward,
@@ -340,7 +369,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
                           ),
                           Expanded(
                             child: _buildItemRingkasan(
-                              label: 'Pengeluaran Kas',
+                              label: 'Pengeluaran Periode',
                               nilai: formatRupiah(totalKeluarPeriode),
                               warna: const Color(0xFFC62828),
                               icon: Icons.arrow_upward,
@@ -348,15 +377,15 @@ class _LaporanScreenState extends State<LaporanScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       Row(
                         children: [
                           Expanded(
                             child: _buildItemRingkasan(
-                              label: 'Donatur Aktif',
-                              nilai: '$totalDonaturAktif Orang',
-                              warna: Colors.blueGrey.shade800,
-                              icon: Icons.people_outline,
+                              label: 'Total Saldo Kas',
+                              nilai: formatRupiah(ringkasanKumulatif.totalSaldo),
+                              warna: const Color(0xFF1B5E20),
+                              icon: Icons.account_balance_wallet_outlined,
                             ),
                           ),
                           Container(
@@ -366,10 +395,36 @@ class _LaporanScreenState extends State<LaporanScreen> {
                           ),
                           Expanded(
                             child: _buildItemRingkasan(
-                              label: 'Anak Terbantu',
-                              nilai: '$totalAnakAktif Siswa',
+                              label: 'Saldo Siap Pakai',
+                              nilai: formatRupiah(ringkasanKumulatif.saldoBisaDipakai),
+                              warna: const Color(0xFF1565C0),
+                              icon: Icons.savings_outlined,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildItemRingkasan(
+                              label: 'Cadangan ${pengaturanProv.persentaseCadangan}% (Tersedia)',
+                              nilai: formatRupiah(ringkasanKumulatif.danaCadanganTersedia),
+                              warna: const Color(0xFFE65100),
+                              icon: Icons.shield_outlined,
+                            ),
+                          ),
+                          Container(
+                            height: 48,
+                            width: 1,
+                            color: Colors.grey.shade300,
+                          ),
+                          Expanded(
+                            child: _buildItemRingkasan(
+                              label: 'Penerima & Donatur',
+                              nilai: '$totalDonaturAktif Dntr / $totalAnakAktif Anak',
                               warna: Colors.blueGrey.shade800,
-                              icon: Icons.school_outlined,
+                              icon: Icons.people_outline,
                             ),
                           ),
                         ],
@@ -391,15 +446,17 @@ class _LaporanScreenState extends State<LaporanScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Icon(Icons.shield_outlined, color: Colors.green),
-                          SizedBox(width: 8),
-                          Text(
-                            'Kepatuhan SOP & Privasi',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                          const Icon(Icons.shield_outlined, color: Colors.green),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Kepatuhan SOP & Privasi',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                         ],
@@ -491,7 +548,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
     required IconData icon,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -499,19 +556,27 @@ class _LaporanScreenState extends State<LaporanScreen> {
             children: [
               Icon(icon, size: 14, color: Colors.grey.shade700),
               const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade800),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade800),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            nilai,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: warna,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              nilai,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: warna,
+              ),
             ),
           ),
         ],

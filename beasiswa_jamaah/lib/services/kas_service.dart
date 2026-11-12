@@ -162,25 +162,50 @@ class KasService {
       final transaksi = TransaksiKas.fromMap(maps.first);
 
       // Jika iuran, hapus juga record iuran terkait agar satu sumber data
-      if (transaksi.kategori == KategoriTransaksi.iuran &&
-          transaksi.sumberId != null) {
+      if (transaksi.kategori == KategoriTransaksi.iuran) {
+        if (transaksi.sumberId != null) {
+          await txn.delete(
+            'iuran',
+            where: 'id = ?',
+            whereArgs: [transaksi.sumberId],
+          );
+        }
         await txn.delete(
           'iuran',
-          where: 'id = ?',
-          whereArgs: [transaksi.sumberId],
+          where: 'transaksi_kas_id = ?',
+          whereArgs: [id],
         );
       }
 
       // Jika penyaluran, hapus juga record penyaluran terkait
-      if ((transaksi.kategori == KategoriTransaksi.perlengkapan ||
-              transaksi.kategori == KategoriTransaksi.uangSaku) &&
-          transaksi.sumberId != null) {
+      if (transaksi.kategori == KategoriTransaksi.perlengkapan ||
+          transaksi.kategori == KategoriTransaksi.uangSaku) {
+        if (transaksi.sumberId != null) {
+          await txn.delete(
+            'penyaluran',
+            where: 'id = ?',
+            whereArgs: [transaksi.sumberId],
+          );
+        }
         await txn.delete(
           'penyaluran',
-          where: 'id = ?',
-          whereArgs: [transaksi.sumberId],
+          where: 'transaksi_kas_id = ?',
+          whereArgs: [id],
         );
       }
+
+      // Safeguard: Selalu bersihkan semua referensi anak (iuran & penyaluran)
+      // agar tidak terjadi pelanggaran Foreign Key SQLite
+      await txn.delete(
+        'iuran',
+        where: 'transaksi_kas_id = ?',
+        whereArgs: [id],
+      );
+      await txn.delete(
+        'penyaluran',
+        where: 'transaksi_kas_id = ?',
+        whereArgs: [id],
+      );
 
       await txn.delete(
         'transaksi_kas',

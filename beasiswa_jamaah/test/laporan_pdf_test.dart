@@ -224,5 +224,66 @@ void main() {
       final pdfContent = String.fromCharCodes(bytes);
       expect(pdfContent.contains('Ahmad Fauzi Rahardjo'), isFalse);
     });
-  });
+
+    test('generateLaporanPdf berhasil membuat dokumen saat daftar donatur, anak, dan penyaluran kosong', () async {
+      final bytesKosong = await LaporanPdfService.generateLaporanPdf(
+        tahunAjaran: 2026,
+        periode: PeriodeLaporan.setahun,
+        daftarDonatur: [],
+        matriksIuran: {},
+        daftarAnak: [],
+        daftarPenyaluran: [],
+        daftarTransaksiKas: [],
+        persentaseCadangan: 10,
+        biayaSd: 2310000,
+        biayaSmp: 3575000,
+        biayaSma: 4785000,
+        pipSd: 450000,
+        pipSmp: 750000,
+        pipSma: 1800000,
+        putusSekolah: 0,
+      );
+
+      expect(bytesKosong.isNotEmpty, isTrue);
+      // Valid PDF magic bytes: %PDF-
+      expect(bytesKosong[0], equals(0x25)); // %
+      expect(bytesKosong[1], equals(0x50)); // P
+      expect(bytesKosong[2], equals(0x44)); // D
+      expect(bytesKosong[3], equals(0x46)); // F
+    });
+  
+    test('generateLaporanPdf dengan 30 donatur dan banyak riwayat penyaluran', () async {
+      final listDonatur30 = List.generate(
+        30,
+        (i) => Donatur(
+          id: i + 1,
+          namaKeluarga: 'Keluarga Donatur Ke-',
+          nomorTelepon: '081234567',
+          nominalIuran: 25000,
+          statusAktif: true,
+          tanggalDaftar: '2026-01-01',
+        ),
+      );
+
+      final bytes = await LaporanPdfService.generateLaporanPdf(
+        tahunAjaran: 2026,
+        periode: PeriodeLaporan.setahun,
+        daftarDonatur: listDonatur30,
+        matriksIuran: {},
+        daftarAnak: [anak1, anak2],
+        daftarPenyaluran: daftarPenyaluran,
+        daftarTransaksiKas: daftarTransaksiKas,
+        persentaseCadangan: 10,
+        biayaSd: 2310000,
+        biayaSmp: 3575000,
+        biayaSma: 4785000,
+        pipSd: 450000,
+        pipSmp: 750000,
+        pipSma: 1800000,
+        putusSekolah: 0,
+      );
+
+      expect(bytes.isNotEmpty, isTrue);
+    });
+});
 }

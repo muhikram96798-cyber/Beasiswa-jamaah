@@ -112,23 +112,30 @@ class PenyaluranService {
         limit: 1,
       );
 
-      if (maps.isNotEmpty) {
-        final transaksiKasId = maps.first['transaksi_kas_id'] as int?;
-        if (transaksiKasId != null) {
-          await txn.delete(
-            'transaksi_kas',
-            where: 'id = ?',
-            whereArgs: [transaksiKasId],
-          );
-        }
-      }
+      final transaksiKasId =
+          maps.isNotEmpty ? maps.first['transaksi_kas_id'] as int? : null;
 
+      // 1. Hapus penyaluran terlebih dahulu agar foreign key constraint terlepas
       await txn.delete(
         'penyaluran',
         where: 'id = ?',
         whereArgs: [penyaluranId],
       );
+
+      // 2. Hapus transaksi kas terkait
+      if (transaksiKasId != null) {
+        await txn.delete(
+          'transaksi_kas',
+          where: 'id = ?',
+          whereArgs: [transaksiKasId],
+        );
+      }
     });
+  }
+
+  /// Batalkan penyaluran dana (salah catat/salah input) dan kembalikan pengeluaran kas terkait
+  Future<void> batalkanPenyaluran(int penyaluranId) async {
+    await hapusPenyaluran(penyaluranId);
   }
 
   /// Ambil riwayat penyaluran untuk anak tertentu

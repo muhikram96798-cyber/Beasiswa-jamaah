@@ -7,8 +7,10 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/transaksi_kas.dart';
+import '../../providers/donatur_provider.dart';
 import '../../providers/kas_provider.dart';
 import '../../providers/pengaturan_provider.dart';
+import '../../providers/penyaluran_provider.dart';
 import '../../services/kas_service.dart';
 import '../../utils/rupiah_formatter.dart';
 import '../../widgets/empty_state.dart';
@@ -137,15 +139,17 @@ class _KasScreenState extends State<KasScreen> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Riwayat Kas',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                          const Expanded(
+                            child: Text(
+                              'Riwayat Kas',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Text(
                             '${transaksiTampil.length} transaksi',
                             style: const TextStyle(
@@ -160,43 +164,46 @@ class _KasScreenState extends State<KasScreen> {
                     // Filter Chip
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          FilterChip(
-                            selected: _filterTipe == 0,
-                            label: Text('Semua (${semuaTransaksi.length})'),
-                            onSelected: (_) =>
-                                setState(() => _filterTipe = 0),
-                          ),
-                          const SizedBox(width: 8),
-                          FilterChip(
-                            selected: _filterTipe == 1,
-                            label: Text(
-                              'Masuk (${kasProvider.daftarPemasukan.length})',
-                              style: TextStyle(
-                                color: _filterTipe == 1
-                                    ? Colors.green[900]
-                                    : null,
-                              ),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            FilterChip(
+                              selected: _filterTipe == 0,
+                              label: Text('Semua (${semuaTransaksi.length})'),
+                              onSelected: (_) =>
+                                  setState(() => _filterTipe = 0),
                             ),
-                            onSelected: (_) =>
-                                setState(() => _filterTipe = 1),
-                          ),
-                          const SizedBox(width: 8),
-                          FilterChip(
-                            selected: _filterTipe == 2,
-                            label: Text(
-                              'Keluar (${kasProvider.daftarPengeluaran.length})',
-                              style: TextStyle(
-                                color: _filterTipe == 2
-                                    ? Colors.orange[900]
-                                    : null,
+                            const SizedBox(width: 8),
+                            FilterChip(
+                              selected: _filterTipe == 1,
+                              label: Text(
+                                'Masuk (${kasProvider.daftarPemasukan.length})',
+                                style: TextStyle(
+                                  color: _filterTipe == 1
+                                      ? Colors.green[900]
+                                      : null,
+                                ),
                               ),
+                              onSelected: (_) =>
+                                  setState(() => _filterTipe = 1),
                             ),
-                            onSelected: (_) =>
-                                setState(() => _filterTipe = 2),
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            FilterChip(
+                              selected: _filterTipe == 2,
+                              label: Text(
+                                'Keluar (${kasProvider.daftarPengeluaran.length})',
+                                style: TextStyle(
+                                  color: _filterTipe == 2
+                                      ? Colors.orange[900]
+                                      : null,
+                                ),
+                              ),
+                              onSelected: (_) =>
+                                  setState(() => _filterTipe = 2),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -334,11 +341,10 @@ class _KasScreenState extends State<KasScreen> {
   Widget _buildHeaderSaldo(RingkasanKas ringkasan, int pctCadangan) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
         ),
       ),
       child: Column(
@@ -347,21 +353,25 @@ class _KasScreenState extends State<KasScreen> {
           const Text(
             'TOTAL KAS BERSAMA',
             style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
-              color: Colors.black54,
+              color: Color(0xFF64748B),
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            formatRupiah(ringkasan.totalSaldo),
-            style: TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.bold,
-              color: ringkasan.totalSaldo >= 0
-                  ? Colors.green[900]
-                  : Colors.red[900],
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              formatRupiah(ringkasan.totalSaldo),
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                color: ringkasan.totalSaldo >= 0
+                    ? const Color(0xFF166534)
+                    : const Color(0xFFDC2626),
+                letterSpacing: -0.5,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -372,45 +382,49 @@ class _KasScreenState extends State<KasScreen> {
               // Saldo Siap Pakai
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(13),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.green.shade300),
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.check_circle_outline,
-                              size: 16, color: Colors.green[800]),
-                          const SizedBox(width: 4),
+                          const Icon(Icons.check_circle_rounded,
+                              size: 15, color: Color(0xFF166534)),
+                          const SizedBox(width: 5),
                           const Expanded(
                             child: Text(
                               'Saldo Siap Pakai',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                                color: Color(0xFF14532D),
                               ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        formatRupiah(ringkasan.saldoBisaDipakai),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green[900],
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          formatRupiah(ringkasan.saldoBisaDipakai),
+                          style: const TextStyle(
+                            fontSize: 16.5,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF166534),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       const Text(
-                        'Untuk beasiswa & operasional',
-                        style: TextStyle(fontSize: 10, color: Colors.black54),
+                        'Untuk beasiswa & belanja',
+                        style: TextStyle(fontSize: 10.5, color: Color(0xFF15803D)),
                       ),
                     ],
                   ),
@@ -421,45 +435,49 @@ class _KasScreenState extends State<KasScreen> {
               // Pos Dana Cadangan
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(13),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.blue.shade300),
+                    color: const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.lock_outline,
-                              size: 16, color: Colors.blue[800]),
-                          const SizedBox(width: 4),
+                          Icon(Icons.shield_rounded,
+                              size: 15, color: Colors.amber.shade800),
+                          const SizedBox(width: 5),
                           Expanded(
                             child: Text(
-                              'Pos Cadangan ($pctCadangan%)',
-                              style: const TextStyle(
+                              'Cadangan ($pctCadangan%)',
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                                color: Colors.amber.shade900,
                               ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text(
-                        formatRupiah(ringkasan.danaCadanganTersedia),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue[900],
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          formatRupiah(ringkasan.danaCadanganTersedia),
+                          style: TextStyle(
+                            fontSize: 16.5,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.amber.shade900,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        'Untuk antisipasi & darurat',
-                        style: TextStyle(fontSize: 10, color: Colors.black54),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Pos wajib darurat & amanah',
+                        style: TextStyle(fontSize: 10.5, color: Colors.amber.shade800),
                       ),
                     ],
                   ),
@@ -477,41 +495,57 @@ class _KasScreenState extends State<KasScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.arrow_downward,
-                        size: 16, color: Colors.green),
-                    const SizedBox(width: 4),
-                    const Text('Total Masuk: ',
-                        style: TextStyle(fontSize: 12, color: Colors.black54)),
-                    Text(
-                      formatRupiah(ringkasan.totalPemasukan),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.arrow_downward,
+                          size: 15, color: Colors.green),
+                      const SizedBox(width: 4),
+                      const Text('Masuk: ',
+                          style: TextStyle(fontSize: 12, color: Colors.black54)),
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            formatRupiah(ringkasan.totalPemasukan),
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                Row(
-                  children: [
-                    const Icon(Icons.arrow_upward,
-                        size: 16, color: Colors.red),
-                    const SizedBox(width: 4),
-                    const Text('Total Keluar: ',
-                        style: TextStyle(fontSize: 12, color: Colors.black54)),
-                    Text(
-                      formatRupiah(ringkasan.totalPengeluaran),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.arrow_upward,
+                          size: 15, color: Colors.red),
+                      const SizedBox(width: 4),
+                      const Text('Keluar: ',
+                          style: TextStyle(fontSize: 12, color: Colors.black54)),
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            formatRupiah(ringkasan.totalPengeluaran),
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -616,14 +650,28 @@ class _KasScreenState extends State<KasScreen> {
                 labelKonfirmasi: 'Ya, Hapus',
               );
               if (ok && mounted) {
-                final pct = context.read<PengaturanProvider>().pctCadangan;
-                await context
-                    .read<KasProvider>()
-                    .hapusTransaksi(item.id!, persentaseCadangan: pct);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Transaksi kas telah dihapus')),
-                  );
+                try {
+                  final pct = context.read<PengaturanProvider>().pctCadangan;
+                  final tahun = context.read<PengaturanProvider>().tahunAjaranAktif;
+                  await context
+                      .read<KasProvider>()
+                      .hapusTransaksi(item.id!, persentaseCadangan: pct);
+                  if (mounted) {
+                    context.read<DonaturProvider>().muatData(tahun: tahun);
+                    context.read<PenyaluranProvider>().muatData();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Transaksi kas telah dihapus')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Gagal menghapus transaksi: $e'),
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                    );
+                  }
                 }
               }
             },

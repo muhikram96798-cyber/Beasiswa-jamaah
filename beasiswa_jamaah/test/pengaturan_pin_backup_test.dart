@@ -71,6 +71,18 @@ void main() {
       expect(provider.sudahAdaPin, isFalse);
       expect(provider.verifikasiPin('123456'), isTrue); // belum ada PIN
     });
+
+    test('PengaturanProvider fallback ke defaultValue jika nilai string kosong atau belum diset', () async {
+      final provider = PengaturanProvider();
+      await provider.muat();
+
+      expect(
+        provider.get('kunci_tidak_ada', defaultValue: 'Nilai Default'),
+        equals('Nilai Default'),
+      );
+      expect(provider.namaMasjid, equals('Masjid Jami Al-Ikhlas'));
+      expect(provider.tahunAjaranAktif, equals(DateTime.now().year));
+    });
   });
 
   group('Uji Validasi File Header SQLite Cadangan (Tahap 8)', () {

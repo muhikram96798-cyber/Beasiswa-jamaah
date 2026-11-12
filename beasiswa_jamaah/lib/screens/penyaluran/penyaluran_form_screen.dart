@@ -295,6 +295,7 @@ class _PenyaluranFormScreenState extends State<PenyaluranFormScreen> {
               ] else ...[
                 DropdownButtonFormField<Anak>(
                   initialValue: _anakTerpilih,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Pilih Anak Penerima *',
                     prefixIcon: Icon(Icons.school_outlined),
@@ -382,6 +383,7 @@ class _PenyaluranFormScreenState extends State<PenyaluranFormScreen> {
                 // Kategori Perlengkapan
                 DropdownButtonFormField<JenisPenyaluran>(
                   initialValue: _jenisBarang,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Jenis Perlengkapan Sekolah *',
                     prefixIcon: Icon(Icons.category_outlined),
@@ -395,7 +397,7 @@ class _PenyaluranFormScreenState extends State<PenyaluranFormScreen> {
                   ].map((j) {
                     return DropdownMenuItem(
                       value: j,
-                      child: Text(j.label),
+                      child: Text(j.label, overflow: TextOverflow.ellipsis),
                     );
                   }).toList(),
                   onChanged: (val) {
@@ -464,6 +466,7 @@ class _PenyaluranFormScreenState extends State<PenyaluranFormScreen> {
                 // Pilihan Bulan
                 DropdownButtonFormField<int>(
                   initialValue: _bulanUangSaku,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Untuk Bulan *',
                     prefixIcon: Icon(Icons.calendar_month_outlined),
@@ -472,7 +475,10 @@ class _PenyaluranFormScreenState extends State<PenyaluranFormScreen> {
                     final b = i + 1;
                     return DropdownMenuItem(
                       value: b,
-                      child: Text(DonaturService.getNamaBulan(b)),
+                      child: Text(
+                        DonaturService.getNamaBulan(b),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     );
                   }),
                   onChanged: (val) {

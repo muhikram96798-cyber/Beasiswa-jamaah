@@ -20,6 +20,7 @@ class PengaturanProvider extends ChangeNotifier {
       final db = await DatabaseService.instance.database;
       final rows = await db.query('pengaturan');
       _data.clear();
+      _data.addAll(PengaturanKey.defaults);
       for (final row in rows) {
         _data[row['kunci'] as String] = row['nilai'] as String;
       }
@@ -33,9 +34,23 @@ class PengaturanProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Muat data langsung dari Map (terutama untuk testing atau mock)
+  void muatDariMap(Map<String, String> data) {
+    _data.clear();
+    _data.addAll(PengaturanKey.defaults);
+    _data.addAll(data);
+    _loaded = true;
+    notifyListeners();
+  }
+
   /// Baca nilai sebagai String
-  String get(String kunci, {String defaultValue = ''}) =>
-      _data[kunci] ?? defaultValue;
+  String get(String kunci, {String defaultValue = ''}) {
+    final val = _data[kunci];
+    if (val == null || (val.isEmpty && defaultValue.isNotEmpty)) {
+      return defaultValue;
+    }
+    return val;
+  }
 
   /// Baca nilai sebagai int
   int getInt(String kunci, {int defaultValue = 0}) =>

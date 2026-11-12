@@ -21,13 +21,13 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(ikon, size: 72, color: tema.colorScheme.outlineVariant),
-            const SizedBox(height: 16),
+            Icon(ikon, size: 64, color: tema.colorScheme.outlineVariant),
+            const SizedBox(height: 12),
             Text(
               pesan,
               textAlign: TextAlign.center,
@@ -46,7 +46,7 @@ class EmptyState extends StatelessWidget {
               ),
             ],
             if (tombol != null) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               tombol!,
             ],
           ],

@@ -3,6 +3,7 @@
 // navigasi bawah 5 tab, dan routing dasar.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/anak_provider.dart';
@@ -33,6 +34,15 @@ class BeasiswaJamaahApp extends StatelessWidget {
         title: 'Beasiswa Jamaah Tetap',
         debugShowCheckedModeBanner: false,
         locale: const Locale('id', 'ID'),
+        supportedLocales: const [
+          Locale('id', 'ID'),
+          Locale('en', 'US'),
+        ],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         theme: _buatTema(),
         home: const MainNavigationShell(),
       ),
@@ -40,55 +50,132 @@ class BeasiswaJamaahApp extends StatelessWidget {
   }
 
   ThemeData _buatTema() {
-    // Warna utama: hijau tenang (Material 3)
-    const seedColor = Color(0xFF2E7D32); // Green 800
+    // Warna utama: Hijau Emerald Islami yang ramah, bersih, dan berwibawa
+    const primaryGreen = Color(0xFF166534); // Forest Emerald Green
+    const primaryLight = Color(0xFFDCFCE7); // Soft Mint Light
+    const amberAccent = Color(0xFFD97706); // Warm Amber Gold
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: seedColor,
+        seedColor: primaryGreen,
+        primary: primaryGreen,
+        onPrimary: Colors.white,
+        primaryContainer: primaryLight,
+        onPrimaryContainer: const Color(0xFF14532D),
+        secondary: const Color(0xFF0F766E),
+        tertiary: amberAccent,
+        surface: const Color(0xFFF8FAFC),
+        surfaceContainerHighest: const Color(0xFFEEF2F6),
         brightness: Brightness.light,
       ),
-      // Ukuran font cukup besar untuk pengurus yang awam teknologi
+      scaffoldBackgroundColor: const Color(0xFFF6F8F6),
+      // Ukuran font ramah untuk pengurus DKM yang awam teknologi
       textTheme: const TextTheme(
-        displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-        displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-        headlineLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-        titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-        bodyLarge: TextStyle(fontSize: 16),
-        bodyMedium: TextStyle(fontSize: 15),
+        displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+        displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+        headlineLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+        headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+        titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xFF1E293B)),
+        bodyLarge: TextStyle(fontSize: 16, color: Color(0xFF1E293B)),
+        bodyMedium: TextStyle(fontSize: 15, color: Color(0xFF334155)),
         labelLarge: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
-      // AppBar
+      // AppBar bernuansa hijau kokoh dengan teks putih beresolusi tinggi
       appBarTheme: const AppBarTheme(
         centerTitle: false,
+        backgroundColor: primaryGreen,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 2,
+        shadowColor: Colors.black26,
+        iconTheme: IconThemeData(color: Colors.white),
+        actionsIconTheme: IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(
-          fontSize: 20,
+          fontSize: 19,
           fontWeight: FontWeight.bold,
           color: Colors.white,
+          letterSpacing: 0.2,
         ),
       ),
-      // Card
-      cardTheme: const CardThemeData(
-        elevation: 1,
-        margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      // Card modern dengan lekukan halus dan bayangan lembut
+      cardTheme: CardThemeData(
+        elevation: 1.5,
+        shadowColor: Colors.black.withValues(alpha: 0.05),
+        color: Colors.white,
+        margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFE2E8F0), width: 0.8),
+        ),
       ),
-      // Input
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      // Navigasi bawah modern Material 3
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.white,
+        indicatorColor: primaryLight,
+        surfaceTintColor: Colors.transparent,
+        elevation: 6,
+        shadowColor: Colors.black12,
+        height: 68,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: primaryGreen,
+            );
+          }
+          return const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF64748B),
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: primaryGreen, size: 24);
+          }
+          return const IconThemeData(color: Color(0xFF64748B), size: 24);
+        }),
+      ),
+      // Input form yang ramah dan jelas
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: primaryGreen, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       // Tombol utama
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(double.infinity, 52),
+          backgroundColor: primaryGreen,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(64, 48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: const TextStyle(
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
           ),
         ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: primaryGreen,
+        foregroundColor: Colors.white,
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }
@@ -106,13 +193,43 @@ class MainNavigationShell extends StatefulWidget {
 class _MainNavigationShellState extends State<MainNavigationShell> {
   int _indexAktif = 0;
 
-  List<Widget> get _layar => [
-        BerandaScreen(onPindahTab: (i) => setState(() => _indexAktif = i)),
-        const DonaturListScreen(),
-        const KasScreen(),
-        const AnakListScreen(),
-        const LaporanScreen(),
-      ];
+  late final List<Widget> _layar = [
+    BerandaScreen(onPindahTab: _pindahKeTab),
+    const DonaturListScreen(),
+    const KasScreen(),
+    const AnakListScreen(),
+    const LaporanScreen(),
+  ];
+
+  void _pindahKeTab(int index) {
+    setState(() => _indexAktif = index);
+    if (!mounted) return;
+    final p = context.read<PengaturanProvider>();
+    switch (index) {
+      case 0: // Beranda
+        context.read<KasProvider>().muatData(persentaseCadangan: p.persentaseCadangan);
+        context.read<DonaturProvider>().muatData(tahun: p.tahunAjaranAktif);
+        context.read<AnakProvider>().muatData();
+        context.read<PenyaluranProvider>().muatData();
+        break;
+      case 1: // Donatur
+        context.read<DonaturProvider>().muatData(tahun: p.tahunAjaranAktif);
+        break;
+      case 2: // Kas
+        context.read<KasProvider>().muatData(persentaseCadangan: p.persentaseCadangan);
+        break;
+      case 3: // Anak
+        context.read<AnakProvider>().muatData();
+        context.read<PenyaluranProvider>().muatData();
+        break;
+      case 4: // Laporan
+        context.read<DonaturProvider>().muatData(tahun: p.tahunAjaranAktif);
+        context.read<KasProvider>().muatData(persentaseCadangan: p.persentaseCadangan);
+        context.read<AnakProvider>().muatData();
+        context.read<PenyaluranProvider>().muatData();
+        break;
+    }
+  }
 
   @override
   void initState() {
@@ -132,7 +249,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _indexAktif,
-        onDestinationSelected: (i) => setState(() => _indexAktif = i),
+        onDestinationSelected: _pindahKeTab,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const [
           NavigationDestination(

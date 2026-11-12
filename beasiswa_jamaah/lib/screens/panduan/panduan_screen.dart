@@ -21,38 +21,85 @@ class PanduanScreen extends StatelessWidget {
         children: [
           // Header Kartu Selamat Datang
           Card(
-            color: const Color(0xFF2E7D32),
+            elevation: 2,
+            shadowColor: const Color(0xFF166534).withValues(alpha: 0.3),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
             ),
-            child: const Padding(
-              padding: EdgeInsets.all(20),
+            clipBehavior: Clip.antiAlias,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFF0F5132),
+                    Color(0xFF166534),
+                    Color(0xFF064E3B),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.mosque, color: Colors.white, size: 28),
-                      SizedBox(width: 10),
-                      Text(
-                        'Program Beasiswa Jamaah Tetap',
-                        style: TextStyle(
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
                           color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Program Beasiswa Jamaah',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'SOP & Panduan Pengurus Amanah',
+                              style: TextStyle(
+                                color: Color(0xFFDCFCE7),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 10),
-                  Text(
+                  const SizedBox(height: 12),
+                  const Text(
                     'Pedoman teknis bagi pengurus DKM, bendahara, dan koordinator '
                     'pendidikan dalam mengelola iuran jamaah, menyeleksi penerima, '
                     'dan menyalurkan beasiswa secara amanah dan transparan.',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 13,
-                      height: 1.4,
+                      height: 1.45,
                     ),
                   ),
                 ],

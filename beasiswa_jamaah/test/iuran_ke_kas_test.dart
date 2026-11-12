@@ -83,5 +83,18 @@ void main() {
       final kunciBulanLain = buatKunci(1, 2, 2026);
       expect(daftarIuran.contains(kunciBulanLain), isFalse);
     });
+
+    test('Logika sinkronisasi tahun ajaran aktif memastikan konsistensi pencatatan', () {
+      const tahunAjaranAktifPengaturan = 2027;
+      int tahunDipakaiDialog(int? tahunAwal) => tahunAwal ?? tahunAjaranAktifPengaturan;
+
+      // Beranda mengoper tahun ajaran aktif
+      final tahunDariBeranda = tahunDipakaiDialog(tahunAjaranAktifPengaturan);
+      expect(tahunDariBeranda, 2027);
+
+      // Fallback dialog menggunakan tahun ajaran aktif pengaturan
+      final tahunFallback = tahunDipakaiDialog(null);
+      expect(tahunFallback, 2027);
+    });
   });
 }

@@ -119,6 +119,11 @@ class _PinAuthDialogState extends State<PinAuthDialog> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
+            onChanged: (val) {
+              if (val.trim().length == 6) {
+                _submit();
+              }
+            },
             onSubmitted: (_) => _submit(),
           ),
         ],
@@ -276,6 +281,7 @@ class _AturPinDialogState extends State<AturPinDialog> {
                 counterText: '',
                 prefixIcon: const Icon(Icons.check_circle_outline),
               ),
+              onSubmitted: (_) => _simpan(),
             ),
           ],
         ),
